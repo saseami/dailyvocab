@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:gui": "node scripts/autonomous_tester.mjs",
+    "test:loop": "npm run build && node scripts/autonomous_tester.mjs"
   },
   "keywords": [
     "english",
@@ -21,6 +23,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/vite": "^4.3.5",
     "@types/canvas-confetti": "^1.9.0",
     "@types/react": "^19.0.10",

@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { playSound } from '../utils/audio';
 import { getTopicSkillsProgressMap } from '../utils/topicProgress';
+import { RadarSkillsChart } from './RadarSkillsChart';
+import { TOEICScorePredictor } from './TOEICScorePredictor';
 
 interface MobileProfileTabProps {
   progress: UserProgress;
@@ -132,6 +134,22 @@ export const MobileProfileTab: React.FC<MobileProfileTabProps> = ({
       };
     }
   }, [masteredCount, learnedCount, skillCounts]);
+
+  // Radar chart data for 4 TOEIC skills
+  const radarData = useMemo(() => {
+    const vocabPercent = Math.min(100, Math.round((masteredCount / Math.max(1, totalWordsCount)) * 100));
+    const listeningPercent = Math.min(100, Math.round((skillCounts.listening / 30) * 100));
+    const readingPercent = Math.min(100, Math.round((skillCounts.reading / 30) * 100));
+    const swPercent = Math.min(100, Math.round((skillCounts.sw / 30) * 100));
+
+    return {
+      vocab: Math.max(12, vocabPercent),
+      listening: Math.max(12, listeningPercent),
+      reading: Math.max(12, readingPercent),
+      speakingWriting: Math.max(12, swPercent),
+      targetScore: activeProfile?.targetScore || 850,
+    };
+  }, [masteredCount, totalWordsCount, skillCounts, activeProfile?.targetScore]);
 
   // Export JSON
   const handleExport = () => {
@@ -264,7 +282,17 @@ export const MobileProfileTab: React.FC<MobileProfileTabProps> = ({
         </div>
       </div>
 
-      {/* KHỐI 2: THỐNG KÊ CHI TIẾT 4 KỸ NĂNG THỰC TẾ (CÓ SỐ LIỆU ĐO ĐẠC) */}
+      {/* KHỐI 2 (MỚI): BIỂU ĐỒ RADAR 4 KỸ NĂNG ETS */}
+      <RadarSkillsChart data={radarData} />
+
+      {/* KHỐI 3 (MỚI): DỰ ĐOÁN ĐIỂM THẬT THANG ETS 990 & PHÂN TÍCH THẾ MẠNH / LỖ HỔNG */}
+      <TOEICScorePredictor 
+        progress={progress}
+        activeProfile={activeProfile}
+        totalWordsCount={totalWordsCount}
+      />
+
+      {/* KHỐI 4: THỐNG KÊ CHI TIẾT 4 KỸ NĂNG THỰC TẾ (CÓ SỐ LIỆU ĐO ĐẠC) */}
       <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

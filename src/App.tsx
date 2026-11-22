@@ -12,6 +12,7 @@ import { MobileBottomNav, MobileTab } from './components/MobileBottomNav';
 import { MobileNotebookTab } from './components/MobileNotebookTab';
 import { MobileProfileTab } from './components/MobileProfileTab';
 import { ProfileSwitcherModal } from './components/ProfileSwitcherModal';
+import { OfflineIndicator } from './components/OfflineIndicator';
 import { TOEICPhase } from './data/toeicSkillData';
 import { playSound } from './utils/audio';
 import { Target, Trophy, Sparkles, Award, ShieldCheck, BookOpen } from 'lucide-react';
@@ -134,6 +135,9 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f0f2f5] dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors selection:bg-[#801732]/20">
+      {/* Offline Status Pill when connection drops */}
+      <OfflineIndicator />
+
       {/* Top Personalized Header */}
       <Header
         streak={progress.streak}
@@ -318,6 +322,7 @@ export const App: React.FC = () => {
         progress={progress}
         totalWordsCount={allWords.length}
         onImportProgress={importProgress}
+        activeProfile={activeProfile}
       />
 
       {/* Floating Highlighter to Learn Popover */}

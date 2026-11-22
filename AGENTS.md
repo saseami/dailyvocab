@@ -9,9 +9,15 @@ Welcome to the **EnglishLearner** workspace — a modern, interactive web applic
   - Skills: `.agents/skills/astryx/SKILL.md`
   - Templates & components reference available in `astryx-repo/packages/core` and `astryx-repo/docs`.
 - **Specialized Skills & Rules**:
+  - `.agents/skills/autonomous-app-tester/SKILL.md`: Vòng lặp kiểm thử GUI tự động (Playwright E2E Robot), bắt lỗi console và tự sửa lỗi đến khi 100% Pass Rate.
   - `.agents/skills/astryx/SKILL.md`: Astryx design system workflows and scaffolding.
   - `.agents/skills/web-dev/SKILL.md`: Modern web development standards.
   - `.agents/rules/coding-standards.md`: Architecture, accessibility, and theming rules.
+
+## Automated Testing & Self-Healing Loop
+- Chạy kiểm thử tự động toàn diện: `npm run test:loop` (Build + E2E GUI Robot Test 10 suites).
+- Kiểm tra GUI nhanh: `npm run test:gui`.
+- Tiêu chuẩn xuất xưởng: Đạt **100.0% Pass Rate** và **0 Console Errors**.
 
 ## App Architecture & Features
 1. **Curriculum Engine**:
