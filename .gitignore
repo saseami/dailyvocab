@@ -1,0 +1,9 @@
+node_modules
+dist
+astryx-repo
+.git
+graphify-out
+.DS_Store
+*.log
+
+.vercel
