@@ -207,11 +207,11 @@ export function getContextualWordInfo(rawWord: string, fullSentence: string = ''
     };
   }
 
-  // 4. Fallback with smart estimation
+  // 4. Fallback: Return clean word instead of generic placeholder string
   return {
     word: clean,
     ipa: `/${clean}/`,
-    meaningVi: 'Từ vựng trong câu luyện đọc TOEIC',
+    meaningVi: clean,
     collocation: foundCollocation,
   };
 }

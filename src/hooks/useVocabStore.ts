@@ -4,6 +4,7 @@ import { TOPICS, INITIAL_WORDS } from '../data/curriculum';
 import { calculateSRS, updateStreak } from '../utils/srs';
 import confetti from 'canvas-confetti';
 import { playSound } from '../utils/audio';
+import { lookupWordLocal, translateWordOnline } from '../utils/translator';
 
 const STORAGE_KEY = 'daily_vocab_user_progress_v1';
 const PROFILES_STORAGE_KEY = 'daily_vocab_user_profiles_v1';
@@ -110,6 +111,62 @@ export function useVocabStore() {
       )
     );
   }, [progress, activeProfileId]);
+
+  // Auto-repair any legacy custom words saved with generic placeholder strings
+  useEffect(() => {
+    if (!progress.customWords || progress.customWords.length === 0) return;
+
+    const dirtyList = progress.customWords.filter(
+      (w) =>
+        !w.meaningVi ||
+        w.meaningVi.includes('Từ vựng trong câu') ||
+        w.meaningVi === 'Từ vựng lưu từ bài học'
+    );
+
+    if (dirtyList.length === 0) return;
+
+    let hasChanges = false;
+    const repaired = progress.customWords.map((w) => {
+      if (
+        !w.meaningVi ||
+        w.meaningVi.includes('Từ vựng trong câu') ||
+        w.meaningVi === 'Từ vựng lưu từ bài học'
+      ) {
+        hasChanges = true;
+        const local = lookupWordLocal(w.word, w.example);
+        if (local) {
+          return {
+            ...w,
+            meaningVi: local.meaningVi,
+            definitionEn: local.definitionEn || w.definitionEn,
+            phonetic: local.phonetic || w.phonetic,
+          };
+        }
+      }
+      return w;
+    });
+
+    if (hasChanges) {
+      setProgress((prev) => ({
+        ...prev,
+        customWords: repaired,
+      }));
+    }
+
+    // Attempt online translation for any remaining dirty words
+    dirtyList.forEach((w) => {
+      translateWordOnline(w.word, w.example).then((res) => {
+        if (res && res.meaningVi && !res.meaningVi.includes('Từ vựng')) {
+          setProgress((prev) => ({
+            ...prev,
+            customWords: prev.customWords.map((cw) =>
+              cw.id === w.id ? { ...cw, meaningVi: res.meaningVi, phonetic: res.phonetic, definitionEn: res.definitionEn } : cw
+            ),
+          }));
+        }
+      }).catch(() => {});
+    });
+  }, [progress.customWords]);
 
   // Create new profile
   const createProfile = useCallback((name: string, avatar: string, targetScore: number) => {
