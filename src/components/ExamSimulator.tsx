@@ -19,13 +19,16 @@ import { TOEICDocumentViewer } from './TOEICDocumentViewer';
 import { OMRAnswerSheet } from './OMRAnswerSheet';
 import { ScoreCertificateModal } from './ScoreCertificateModal';
 import { saveWrongQuestion } from '../utils/errorVault';
+import { getActiveExamSession, saveActiveExamSession, clearActiveExamSession } from '../utils/sessionPersistence';
 
 export const ExamSimulator: React.FC = () => {
-  const [selectedExamId, setSelectedExamId] = useState<string>(MOCK_EXAM_LIST[0].id);
-  const [isTestStarted, setIsTestStarted] = useState(false);
-  const [isTestSubmitted, setIsTestSubmitted] = useState(false);
-  const [secondsRemaining, setSecondsRemaining] = useState(0);
-  const [isOMROpen, setIsOMROpen] = useState(false);
+  const savedExam = getActiveExamSession();
+
+  const [selectedExamId, setSelectedExamId] = useState<string>(savedExam?.examId || MOCK_EXAM_LIST[0].id);
+  const [isTestStarted, setIsTestStarted] = useState<boolean>(savedExam?.isTestStarted || false);
+  const [isTestSubmitted, setIsTestSubmitted] = useState<boolean>(false);
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(savedExam?.secondsRemaining || 0);
+  const [isOMROpen, setIsOMROpen] = useState<boolean>(savedExam?.isOMROpen || false);
   const [isCertificateOpen, setIsCertificateOpen] = useState(false);
 
   // Audio Playback State for Listening Questions
@@ -34,13 +37,13 @@ export const ExamSimulator: React.FC = () => {
   const [autoPlayAudio, setAutoPlayAudio] = useState<boolean>(true);
 
   // Active question index
-  const [currentQIndex, setCurrentQIndex] = useState(0);
+  const [currentQIndex, setCurrentQIndex] = useState<number>(savedExam?.currentQIndex || 0);
 
   // LR Answers: Record<number, 'A' | 'B' | 'C' | 'D'>
-  const [userAnswers, setUserAnswers] = useState<Record<number, 'A' | 'B' | 'C' | 'D'>>({});
+  const [userAnswers, setUserAnswers] = useState<Record<number, 'A' | 'B' | 'C' | 'D'>>(savedExam?.userAnswers || {});
 
   // SW Answers: Record<number, { text: string; score?: number; transcript?: string }>
-  const [swAnswers, setSwAnswers] = useState<Record<number, { text: string; score?: number; transcript?: string }>>({});
+  const [swAnswers, setSwAnswers] = useState<Record<number, { text: string; score?: number; transcript?: string }>>(savedExam?.swAnswers || {});
 
   // Speaking Recording State
   const [isRecording, setIsRecording] = useState(false);
@@ -145,6 +148,21 @@ export const ExamSimulator: React.FC = () => {
       if (timer) clearInterval(timer);
     };
   }, [isTestStarted, isTestSubmitted, secondsRemaining]);
+
+  // Auto-save active exam session state
+  useEffect(() => {
+    if (isTestStarted && !isTestSubmitted && secondsRemaining > 0) {
+      saveActiveExamSession({
+        examId: selectedExamId,
+        isTestStarted: true,
+        secondsRemaining,
+        currentQIndex,
+        userAnswers,
+        swAnswers,
+        isOMROpen,
+      });
+    }
+  }, [isTestStarted, isTestSubmitted, secondsRemaining, currentQIndex, userAnswers, swAnswers, isOMROpen, selectedExamId]);
 
   // Handle Audio for LR Questions
   const handlePlayCurrentAudio = (speed: number = audioSpeed) => {
@@ -269,6 +287,7 @@ export const ExamSimulator: React.FC = () => {
     handleForceStopRecording();
     setIsTestSubmitted(true);
     setIsTestStarted(false);
+    clearActiveExamSession();
     playSound('complete');
 
     // Automatically record wrong questions to Error Vault

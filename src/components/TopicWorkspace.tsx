@@ -14,6 +14,7 @@ import { ReadingHub } from './ReadingHub';
 import { TopicEvaluationModal } from './TopicEvaluationModal';
 import { HandsFreeAudioPlayer } from './HandsFreeAudioPlayer';
 import { calculateTopicOverallProgress, saveTopicSkillCompleted } from '../utils/topicProgress';
+import { getTopicWorkspaceState, saveTopicWorkspaceState } from '../utils/sessionPersistence';
 import { 
   BookOpen, Headphones, Layers, Mic, PenTool, Sparkles, 
   RotateCcw, CheckCircle2, ChevronRight, ArrowRight, Trophy, Zap, 
@@ -51,18 +52,46 @@ export const TopicWorkspace: React.FC<TopicWorkspaceProps> = ({
   currentPhase,
   onNextTopic,
 }) => {
-  // 4 Core Skills of the Topic
-  const [activeSkillTab, setActiveSkillTab] = useState<TopicSkillTab>('vocab');
+  // 4 Core Skills of the Topic - restored from saved workspace state
+  const [activeSkillTab, setActiveSkillTab] = useState<TopicSkillTab>(() => {
+    const saved = getTopicWorkspaceState(topic.id);
+    return saved?.activeSkillTab || 'vocab';
+  });
 
   // 4 Tiered Mastery Sessions in Vocabulary:
-  // 1: Phiên 1 - Nạp Từ Mới (Learn & Explore)
-  // 2: Phiên 2 - Kiểm Tra Lần 1 (Mức Dễ • Gợi ý 3 chữ, không phát âm)
-  // 3: Phiên 3 - Kiểm Tra Lần 2 (Mức Khó • 0 gợi ý sẵn, tối đa 2 lần gợi ý, sai 3 lần là Chưa thuộc)
-  // 4: Phiên 4 - Học Lại Các Từ Chưa Thuộc (Weak Words Recovery)
-  const [activeSession, setActiveSession] = useState<number>(1);
+  const [activeSession, setActiveSession] = useState<number>(() => {
+    const saved = getTopicWorkspaceState(topic.id);
+    return saved?.activeSession || 1;
+  });
 
   // Sub-steps in Phiên 1 (Nạp từ mới)
-  const [vocabStep, setVocabStep] = useState<VocabStudyStep>('flashcard');
+  const [vocabStep, setVocabStep] = useState<VocabStudyStep>(() => {
+    const saved = getTopicWorkspaceState(topic.id);
+    return saved?.vocabStep || 'flashcard';
+  });
+
+  // Restore workspace state when switching topics
+  useEffect(() => {
+    const saved = getTopicWorkspaceState(topic.id);
+    if (saved) {
+      setActiveSkillTab(saved.activeSkillTab);
+      setActiveSession(saved.activeSession);
+      setVocabStep(saved.vocabStep);
+    } else {
+      setActiveSkillTab('vocab');
+      setActiveSession(1);
+      setVocabStep('flashcard');
+    }
+  }, [topic.id]);
+
+  // Auto-save whenever skill tab, session or step changes
+  useEffect(() => {
+    saveTopicWorkspaceState(topic.id, {
+      activeSkillTab,
+      activeSession,
+      vocabStep,
+    });
+  }, [activeSkillTab, activeSession, vocabStep, topic.id]);
 
   // Sub-steps in Skill 4 (Writing first, then Speaking)
   const [swSubMode, setSwSubMode] = useState<'speaking' | 'writing'>('writing');

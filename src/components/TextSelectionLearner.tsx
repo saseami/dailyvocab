@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Word } from '../types';
-import { Sparkles, Plus, Check, ExternalLink, X, Edit3, Volume2, Save } from 'lucide-react';
+import { 
+  Sparkles, Plus, Check, ExternalLink, X, Edit3, Volume2, Save, 
+  Maximize2, ChevronUp, ChevronDown, BookOpen, Lightbulb, Layers, Bookmark, ArrowUpRight 
+} from 'lucide-react';
 import { playSound, speakWord } from '../utils/audio';
 import { lookupWordLocal, translateWordOnline, TranslatedWordResult, cleanSelectedWord } from '../utils/translator';
 
@@ -19,6 +22,7 @@ export const TextSelectionLearner: React.FC<TextSelectionLearnerProps> = ({
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [isExpandedOpen, setIsExpandedOpen] = useState<boolean>(false);
 
   // Form states for Edit Modal
   const [editWord, setEditWord] = useState('');
@@ -154,6 +158,7 @@ export const TextSelectionLearner: React.FC<TextSelectionLearnerProps> = ({
     const savedMeaning = newWordData.meaningVi;
     setSelectedText('');
     setTranslatedResult(null);
+    setIsExpandedOpen(false);
     setToastMessage(`Đã thêm "${savedWordName}" (${savedMeaning}) vào Sổ Từ Cá Nhân!`);
 
     try {
@@ -199,6 +204,7 @@ export const TextSelectionLearner: React.FC<TextSelectionLearnerProps> = ({
     setIsEditModalOpen(false);
     setSelectedText('');
     setTranslatedResult(null);
+    setIsExpandedOpen(false);
     setToastMessage(`Đã thêm "${savedWordName}" (${savedMeaning}) vào Sổ Từ Cá Nhân!`);
 
     try {
@@ -213,6 +219,7 @@ export const TextSelectionLearner: React.FC<TextSelectionLearnerProps> = ({
   const handleDismiss = () => {
     setSelectedText('');
     setTranslatedResult(null);
+    setIsExpandedOpen(false);
     try {
       window.getSelection()?.removeAllRanges();
     } catch {}
@@ -229,7 +236,11 @@ export const TextSelectionLearner: React.FC<TextSelectionLearnerProps> = ({
           <div className="flex items-center gap-2 p-1.5 pl-3 pr-1.5 rounded-2xl bg-slate-900/95 dark:bg-slate-950/95 text-white border-2 border-rose-500/80 shadow-2xl backdrop-blur-md">
             <Sparkles className="w-4 h-4 text-amber-400 flex-shrink-0 animate-pulse" />
             
-            <div className="min-w-0 pr-1 text-left max-w-[130px] sm:max-w-[190px]">
+            <div 
+              onClick={() => setIsExpandedOpen(true)}
+              className="min-w-0 pr-1 text-left max-w-[125px] sm:max-w-[185px] cursor-pointer hover:opacity-90"
+              title="Bấm để mở rộng xem chi tiết và gợi ý câu ví dụ"
+            >
               <span className="text-xs font-black text-rose-300 truncate block">
                 "{selectedText}"
               </span>
@@ -241,6 +252,16 @@ export const TextSelectionLearner: React.FC<TextSelectionLearnerProps> = ({
                 )}
               </span>
             </div>
+
+            {/* Expand Details Button */}
+            <button
+              onClick={() => setIsExpandedOpen(true)}
+              className="px-2 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 text-xs font-bold flex items-center gap-1 flex-shrink-0 transition-all border border-slate-700"
+              title="Bấm mở rộng để xem chi tiết, nghe phát âm và xem gợi ý câu ví dụ"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span className="text-[11px] hidden sm:inline">Mở rộng</span>
+            </button>
 
             {/* Quick 1-Click Save */}
             <button
@@ -269,6 +290,170 @@ export const TextSelectionLearner: React.FC<TextSelectionLearnerProps> = ({
             >
               <X className="w-3.5 h-3.5" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Expanded Word Details & Suggested Context Modal */}
+      {isExpandedOpen && selectedText && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto scrollbar-thin">
+            
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-start gap-2.5 min-w-0">
+                <button
+                  onClick={() => speakWord(translatedResult?.word || selectedText)}
+                  className="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-[#801732] dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 flex items-center justify-center hover:scale-105 active:scale-95 transition-all flex-shrink-0 shadow-xs"
+                  title="Nghe phát âm bản xứ"
+                >
+                  <Volume2 className="w-5 h-5" />
+                </button>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white capitalize">
+                      {translatedResult?.word || selectedText}
+                    </h3>
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950 text-[#801732] dark:text-rose-300">
+                      {translatedResult?.partOfSpeech || 'noun / phrase'}
+                    </span>
+                  </div>
+                  <p className="text-xs font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                    {translatedResult?.phonetic || `/${selectedText}/`}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsExpandedOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex-shrink-0"
+                aria-label="Đóng"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Meaning & Vietnamese Translation */}
+            <div className="p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50">
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block mb-1">
+                Dịch Nghĩa Tiếng Việt:
+              </span>
+              <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-snug">
+                {translatedResult?.meaningVi || selectedText}
+              </p>
+              {translatedResult?.definitionEn && (
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 italic leading-relaxed">
+                  {translatedResult.definitionEn}
+                </p>
+              )}
+            </div>
+
+            {/* Context Sentence where word was selected */}
+            {contextSentence && (
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5 text-[#801732] dark:text-rose-400" />
+                    <span>Ngữ Cảnh Trong Câu Bạn Vừa Đọc:</span>
+                  </span>
+                  <button
+                    onClick={() => speakWord(contextSentence)}
+                    className="text-[11px] font-bold text-slate-500 hover:text-[#801732] flex items-center gap-1"
+                    title="Nghe đọc cả câu ngữ cảnh"
+                  >
+                    <Volume2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Nghe câu</span>
+                  </button>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-medium leading-relaxed">
+                  "{contextSentence}"
+                </p>
+              </div>
+            )}
+
+            {/* Suggested Example Sentences */}
+            {translatedResult?.suggestedExamples && translatedResult.suggestedExamples.length > 0 && (
+              <div className="space-y-2">
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Gợi Ý Câu Ví Dụ Thực Tế Chuẩn ETS ({translatedResult.suggestedExamples.length} câu):</span>
+                </span>
+                
+                <div className="space-y-2">
+                  {translatedResult.suggestedExamples.map((ex, idx) => (
+                    <div 
+                      key={idx}
+                      className="p-3 rounded-2xl bg-amber-50/50 dark:bg-slate-800/40 border border-amber-200/80 dark:border-slate-700/80 space-y-1"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 leading-snug">
+                          • {ex.en}
+                        </p>
+                        <button
+                          onClick={() => speakWord(ex.en)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-amber-600 flex-shrink-0"
+                          title="Nghe câu ví dụ"
+                        >
+                          <Volume2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed pl-2">
+                        {ex.vi}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Related Collocations / Phrases */}
+            {translatedResult?.collocations && translatedResult.collocations.length > 0 && (
+              <div className="p-3 rounded-2xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 space-y-1.5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-purple-800 dark:text-purple-300 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                  <span>Cụm Từ Ghép (Collocations) Thường Đi Cùng:</span>
+                </span>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {translatedResult.collocations.map((col, cIdx) => (
+                    <span 
+                      key={cIdx}
+                      className="px-2.5 py-1 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-800 shadow-2xs"
+                    >
+                      {col}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Actions Bar */}
+            <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                onClick={() => setIsExpandedOpen(false)}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white"
+              >
+                Thu gọn
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleOpenEdit}
+                  className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center gap-1.5 transition-all"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Tùy chỉnh</span>
+                </button>
+
+                <button
+                  onClick={handleQuickSave}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#801732] to-rose-600 hover:from-[#6b132a] hover:to-rose-700 text-white text-xs font-black flex items-center gap-1.5 shadow-md shadow-[#801732]/30 active:scale-95 transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Lưu vào Sổ Từ</span>
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}

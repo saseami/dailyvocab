@@ -4,13 +4,14 @@ import { Topic, Word } from '../types';
 import { generateTopicListeningQuestions } from '../utils/topicSkillGenerator';
 import { saveTopicSkillCompleted } from '../utils/topicProgress';
 import { saveWrongQuestion } from '../utils/errorVault';
+import { getListeningSession, saveListeningSession, clearListeningSession } from '../utils/sessionPersistence';
 import { 
   TOEICAccent, ETS_ACCENTS, getPreferredAccent, 
   setPreferredAccent, speakWithETSAccent 
 } from '../utils/audioAccents';
 import { 
   Headphones, Volume2, CheckCircle2, AlertTriangle, Eye, EyeOff, Sparkles, 
-  HelpCircle, ArrowRight, RotateCcw, Lightbulb, Compass, Zap, Target, Pause, Info, Award, Globe
+  HelpCircle, ArrowRight, ArrowLeft, RotateCcw, Lightbulb, Compass, Zap, Target, Pause, Info, Award, Globe, BookmarkCheck
 } from 'lucide-react';
 import { playSound, stopSpeaking } from '../utils/audio';
 import { TOEICPictureCard } from './TOEICPictureCard';
@@ -52,13 +53,45 @@ export const ListeningHub: React.FC<ListeningHubProps> = ({
     ];
   }, [currentPhase]);
 
+  const topicId = topic?.id || 'general';
+
   const [selectedPart, setSelectedPart] = useState<number>(() => {
-    return currentPhase === 'acceleration' ? 3 : 1;
+    const defaultPart = currentPhase === 'acceleration' ? 3 : 1;
+    const partsToCheck = currentPhase === 'foundation' ? [1, 2] : currentPhase === 'acceleration' ? [3, 4] : [1, 2, 3, 4];
+    for (const p of partsToCheck) {
+      const s = getListeningSession(topicId, p);
+      if (s && (s.currentIndex > 0 || Object.keys(s.userAnswers).length > 0)) {
+        return p;
+      }
+    }
+    return defaultPart;
   });
-  const [completedParts, setCompletedParts] = useState<number[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState<'A' | 'B' | 'C' | 'D' | null>(null);
-  const [showExplanation, setShowExplanation] = useState(false);
+
+  const [completedParts, setCompletedParts] = useState<number[]>(() => {
+    const s = getListeningSession(topicId, selectedPart);
+    return s?.completedParts || [];
+  });
+
+  const [currentIndex, setCurrentIndex] = useState<number>(() => {
+    const s = getListeningSession(topicId, selectedPart);
+    return s?.currentIndex || 0;
+  });
+
+  const [userAnswers, setUserAnswers] = useState<Record<number, 'A' | 'B' | 'C' | 'D'>>(() => {
+    const s = getListeningSession(topicId, selectedPart);
+    return s?.userAnswers || {};
+  });
+
+  const [selectedAnswer, setSelectedAnswer] = useState<'A' | 'B' | 'C' | 'D' | null>(() => {
+    const s = getListeningSession(topicId, selectedPart);
+    return s?.userAnswers?.[s.currentIndex] || null;
+  });
+
+  const [showExplanation, setShowExplanation] = useState<boolean>(() => {
+    const s = getListeningSession(topicId, selectedPart);
+    return !!(s?.userAnswers?.[s.currentIndex]);
+  });
+
   const [showTranscript, setShowTranscript] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -74,26 +107,39 @@ export const ListeningHub: React.FC<ListeningHubProps> = ({
     return () => window.removeEventListener('accent-changed', handleAccentChange);
   }, []);
 
-  // Sync selectedPart with currentPhase on change
+  // Restore saved session when switching parts or topics
   useEffect(() => {
-    if (currentPhase === 'acceleration') {
-      setSelectedPart(3);
-    } else if (currentPhase === 'foundation') {
-      setSelectedPart(1);
+    const saved = getListeningSession(topicId, selectedPart);
+    if (saved) {
+      setCurrentIndex(saved.currentIndex || 0);
+      setUserAnswers(saved.userAnswers || {});
+      const ans = saved.userAnswers?.[saved.currentIndex] || null;
+      setSelectedAnswer(ans);
+      setShowExplanation(!!ans);
+      if (saved.completedParts) {
+        setCompletedParts(saved.completedParts);
+      }
+    } else {
+      setCurrentIndex(0);
+      setUserAnswers({});
+      setSelectedAnswer(null);
+      setShowExplanation(false);
     }
-    setCurrentIndex(0);
-    setSelectedAnswer(null);
-    setShowExplanation(false);
     setShowTranscript(false);
     stopSpeaking();
     setIsPlayingAudio(false);
-  }, [currentPhase]);
+  }, [selectedPart, topicId]);
 
-  // Stop audio on index or part change
+  // Sync selectedAnswer and auto-save on currentIndex or userAnswers change
   useEffect(() => {
+    const existing = userAnswers[currentIndex] || null;
+    setSelectedAnswer(existing);
+    setShowExplanation(!!existing);
     stopSpeaking();
     setIsPlayingAudio(false);
-  }, [currentIndex, selectedPart]);
+    // Auto-save session state
+    saveListeningSession(topicId, selectedPart, currentIndex, userAnswers, completedParts);
+  }, [currentIndex, userAnswers, selectedPart, topicId, completedParts]);
 
   // Dynamically generate topic-linked questions or fallback to phase questions
   const questions = useMemo(() => {
@@ -124,6 +170,13 @@ export const ListeningHub: React.FC<ListeningHubProps> = ({
     setSelectedAnswer(key);
     setShowExplanation(true);
 
+    const updatedAnswers = {
+      ...userAnswers,
+      [currentIndex]: key,
+    };
+    setUserAnswers(updatedAnswers);
+    saveListeningSession(topicId, selectedPart, currentIndex, updatedAnswers, completedParts);
+
     if (key === currentQuestion.correctAnswer) {
       playSound('correct');
     } else {
@@ -152,19 +205,31 @@ export const ListeningHub: React.FC<ListeningHubProps> = ({
 
   const handleNext = () => {
     if (currentIndex < questions.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-      setSelectedAnswer(null);
-      setShowExplanation(false);
+      const nextIdx = currentIndex + 1;
+      setCurrentIndex(nextIdx);
       setShowTranscript(false);
+      saveListeningSession(topicId, selectedPart, nextIdx, userAnswers, completedParts);
+      playSound('click');
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentIndex > 0) {
+      const prevIdx = currentIndex - 1;
+      setCurrentIndex(prevIdx);
+      setShowTranscript(false);
+      saveListeningSession(topicId, selectedPart, prevIdx, userAnswers, completedParts);
       playSound('click');
     }
   };
 
   const handleReset = () => {
     setCurrentIndex(0);
+    setUserAnswers({});
     setSelectedAnswer(null);
     setShowExplanation(false);
     setShowTranscript(false);
+    clearListeningSession(topicId, selectedPart);
     playSound('click');
   };
 
@@ -259,11 +324,29 @@ export const ListeningHub: React.FC<ListeningHubProps> = ({
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {Object.keys(userAnswers).length > 0 && (
+            <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 flex items-center gap-1 shadow-2xs">
+              <BookmarkCheck className="w-3 h-3 text-emerald-600" />
+              <span>Đã lưu {Object.keys(userAnswers).length}/{questions.length}</span>
+            </span>
+          )}
+
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
             Câu {currentIndex + 1} / {questions.length}
           </span>
+
           {currentIndex > 0 && (
+            <button
+              onClick={handlePrev}
+              className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:text-brand-600 flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 transition-all"
+              title="Quay lại câu trước"
+            >
+              <ArrowLeft className="w-3 h-3" /> Câu trước
+            </button>
+          )}
+
+          {(currentIndex > 0 || Object.keys(userAnswers).length > 0) && (
             <button
               onClick={handleReset}
               className="text-[11px] font-semibold text-slate-500 hover:text-brand-600 flex items-center gap-1"
@@ -568,10 +651,20 @@ export const ListeningHub: React.FC<ListeningHubProps> = ({
             {/* Next Question or Complete Skill Button */}
             <div className="pt-2 flex items-center justify-between gap-3 flex-wrap">
               {currentIndex < questions.length - 1 ? (
-                <div className="ml-auto">
+                <div className="w-full flex items-center justify-between gap-2">
+                  {currentIndex > 0 ? (
+                    <button
+                      onClick={handlePrev}
+                      className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-all"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      <span>Câu trước</span>
+                    </button>
+                  ) : <div />}
+
                   <button
                     onClick={handleNext}
-                    className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-bold shadow-md shadow-brand-500/20 flex items-center gap-2 active:scale-95 transition-all"
+                    className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-bold shadow-md shadow-brand-500/20 flex items-center gap-2 active:scale-95 transition-all ml-auto"
                   >
                     <span>Câu tiếp theo ({currentIndex + 2}/{questions.length})</span>
                     <ArrowRight className="w-4 h-4" />

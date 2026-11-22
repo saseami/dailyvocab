@@ -11,6 +11,9 @@ export interface TranslatedWordResult {
   definitionEn: string;
   example: string;
   exampleVi?: string;
+  suggestedExamples?: { en: string; vi: string }[];
+  collocations?: string[];
+  synonyms?: string[];
   isOnlineTranslated?: boolean;
 }
 
@@ -83,6 +86,183 @@ const TOEIC_LOCAL_DICTIONARY: Record<string, { ipa: string; pos: string; vi: str
 };
 
 /**
+ * Generate 2-3 realistic business/TOEIC example sentences for the selected word/collocation
+ */
+export function generateSuggestedExamples(
+  wordOrPhrase: string,
+  meaningVi: string,
+  pos: string = 'noun',
+  contextSentence: string = ''
+): { en: string; vi: string }[] {
+  const clean = wordOrPhrase.trim();
+  const lower = clean.toLowerCase();
+
+  // If word already matches curriculum word, use its authentic example if distinct
+  const fromCurriculum = [...INITIAL_WORDS, ...SUPPLEMENTAL_WORDS].find(
+    w => w.word.toLowerCase() === lower
+  );
+
+  const results: { en: string; vi: string }[] = [];
+
+  if (fromCurriculum && fromCurriculum.example && fromCurriculum.example !== contextSentence) {
+    results.push({
+      en: fromCurriculum.example,
+      vi: fromCurriculum.exampleVi || `Ví dụ với "${clean}" (${meaningVi})`,
+    });
+  }
+
+  // Pre-curated high-impact ETS context examples for common business words
+  const businessTemplates: Record<string, { en: string; vi: string }[]> = {
+    'warranty period': [
+      {
+        en: 'The warranty period will expire at the end of next month unless extended by customer support.',
+        vi: 'Thời hạn bảo hành sẽ hết hạn vào cuối tháng tới trừ khi được bộ phận hỗ trợ khách hàng gia hạn thêm.',
+      },
+      {
+        en: 'Any defective equipment returned within the warranty period is eligible for free parts replacement.',
+        vi: 'Bất kỳ thiết bị lỗi nào được hoàn trả trong thời hạn bảo hành đều đủ điều kiện được thay thế linh kiện miễn phí.',
+      },
+    ],
+    'warranty': [
+      {
+        en: 'All electronic office appliances come with a two-year standard manufacturer warranty.',
+        vi: 'Tất cả thiết bị văn phòng điện tử đều đi kèm gói bảo hành tiêu chuẩn hai năm từ nhà sản xuất.',
+      },
+      {
+        en: 'Customers are strongly advised to register their warranty online within 30 days of purchase.',
+        vi: 'Khách hàng được khuyến nghị đăng ký bảo hành trực tuyến trong vòng 30 ngày kể từ ngày mua hàng.',
+      },
+    ],
+    'period': [
+      {
+        en: 'The 14-day trial period allows prospective clients to evaluate all platform features free of charge.',
+        vi: 'Thời gian dùng thử 14 ngày cho phép khách hàng tiềm năng trải nghiệm miễn phí toàn bộ tính năng.',
+      },
+      {
+        en: 'During the introductory period, annual subscription fees are discounted by 20 percent.',
+        vi: 'Trong giai đoạn giới thiệu ban đầu, phí thuê bao hàng năm được giảm giá 20%.',
+      },
+    ],
+    'failure': [
+      {
+        en: 'Rigorous maintenance inspections help prevent unexpected mechanical failure on the production line.',
+        vi: 'Kiểm tra bảo dưỡng nghiêm ngặt giúp ngăn ngừa sự cố hỏng hóc cơ khí bất ngờ trên dây chuyền sản xuất.',
+      },
+      {
+        en: 'Failure to comply with international safety regulations may result in substantial financial penalties.',
+        vi: 'Việc không tuân thủ các quy định an toàn quốc tế có thể dẫn đến các khoản phạt tài chính nặng.',
+      },
+    ],
+    'experience': [
+      {
+        en: 'Our 24/7 technical helpdesk assists all registered users who experience network connectivity issues.',
+        vi: 'Bộ phận hỗ trợ kỹ thuật 24/7 hỗ trợ mọi người dùng đã đăng ký khi gặp phải sự cố kết nối mạng.',
+      },
+      {
+        en: 'Qualified candidates should possess at least three years of proven managerial experience in logistics.',
+        vi: 'Ứng viên đạt yêu cầu cần có ít nhất ba năm kinh nghiệm quản lý đã được chứng minh trong ngành logistics.',
+      },
+    ],
+    'entitled': [
+      {
+        en: 'Full-time staff members are entitled to comprehensive medical benefits and paid vacation days.',
+        vi: 'Nhân viên chính thức được quyền hưởng quyền lợi y tế toàn diện và những ngày nghỉ phép có lương.',
+      },
+      {
+        en: 'Corporate club members are entitled to complimentary access to the airport lounge facilities.',
+        vi: 'Thành viên câu lạc bộ doanh nghiệp có quyền sử dụng miễn phí phòng chờ tiện nghi tại sân bay.',
+      },
+    ],
+    'replacement': [
+      {
+        en: 'The distributor promised to dispatch an immediate replacement for the defective shipments.',
+        vi: 'Nhà phân phối cam kết gửi linh kiện thay thế ngay lập tức cho các lô hàng bị lỗi.',
+      },
+      {
+        en: 'The human resources department is actively screening candidates for the department head replacement.',
+        vi: 'Phòng nhân sự đang tích cực sàng lọc ứng viên để thay thế vị trí trưởng phòng.',
+      },
+    ],
+    'guideline': [
+      {
+        en: 'All newly hired staff must review the company safety guidelines before operating machinery.',
+        vi: 'Tất cả nhân viên mới tuyển dụng phải xem xét các hướng dẫn an toàn trước khi vận hành máy móc.',
+      },
+    ],
+    'guidelines': [
+      {
+        en: 'The committee published strict guidelines to prevent any conflict of interest during the tender process.',
+        vi: 'Ủy ban đã công bố các nguyên tắc hướng dẫn nghiêm ngặt để ngăn ngừa xung đột lợi ích.',
+      },
+    ],
+    'misunderstanding': [
+      {
+        en: 'Clear and transparent written communication is vital to eliminate misunderstandings between clients and contractors.',
+        vi: 'Giao tiếp bằng văn bản rõ ràng và minh bạch là thiết yếu để loại bỏ sự hiểu lầm giữa khách hàng và nhà thầu.',
+      },
+    ],
+  };
+
+  if (businessTemplates[lower]) {
+    businessTemplates[lower].forEach(item => {
+      if (item.en !== contextSentence && !results.some(r => r.en === item.en)) {
+        results.push(item);
+      }
+    });
+  }
+
+  // Dynamic sentence generation based on part of speech if not enough examples
+  if (results.length < 2) {
+    if (pos.includes('verb')) {
+      results.push({
+        en: `The executive board decided to ${clean} the ongoing proposal to maximize quarterly revenue.`,
+        vi: `Hội đồng quản trị đã quyết định ${meaningVi} đề xuất hiện tại để tối đa hóa doanh thu quý.`,
+      });
+      results.push({
+        en: `All regional branch supervisors are instructed to ${clean} departmental records before the internal audit.`,
+        vi: `Tất cả giám sát viên chi nhánh được chỉ đạo phải ${meaningVi} hồ sơ phòng ban trước kỳ kiểm toán nội bộ.`,
+      });
+    } else if (pos.includes('adj')) {
+      results.push({
+        en: `The committee released a ${clean} evaluation report addressing all key concerns of the investors.`,
+        vi: `Hội đồng đã phát hành một báo cáo đánh giá ${meaningVi} giải quyết tất cả các quan ngại của nhà đầu tư.`,
+      });
+      results.push({
+        en: `Delivering ${clean} customer service remains our organization's primary commitment this fiscal year.`,
+        vi: `Cung cấp dịch vụ khách hàng ${meaningVi} vẫn là cam kết hàng đầu của tổ chức chúng tôi trong năm tài chính này.`,
+      });
+    } else {
+      results.push({
+        en: `All official corporate documents regarding the ${clean} must be submitted to administration by Friday.`,
+        vi: `Mọi tài liệu công ty chính thức liên quan đến ${meaningVi} phải được nộp cho ban hành chính trước thứ Sáu.`,
+      });
+      results.push({
+        en: `The newly approved initiative is expected to optimize the ${clean} across all global regional offices.`,
+        vi: `Sáng kiến mới được phê duyệt dự kiến sẽ tối ưu hóa ${meaningVi} trên toàn bộ các văn phòng khu vực toàn cầu.`,
+      });
+    }
+  }
+
+  return results.slice(0, 3);
+}
+
+/**
+ * Find related collocations and business idioms
+ */
+export function findRelatedCollocations(wordOrPhrase: string): string[] {
+  const clean = wordOrPhrase.toLowerCase().trim();
+  const found: string[] = [];
+
+  KNOWN_COLLOCATIONS.forEach(c => {
+    if (c.phrase.toLowerCase().includes(clean) || clean.includes(c.phrase.toLowerCase())) {
+      found.push(`${c.phrase} (${c.meaningVi})`);
+    }
+  });
+
+  return Array.from(new Set(found)).slice(0, 4);
+}
+
+/**
  * Clean raw input to extract base words
  */
 export function cleanSelectedWord(raw: string): string {
@@ -103,6 +283,8 @@ export function lookupWordLocal(rawText: string, contextSentence: string = ''): 
   const lowerSentence = contextSentence.toLowerCase();
   for (const c of KNOWN_COLLOCATIONS) {
     if (lowerSentence.includes(c.phrase.toLowerCase()) || clean.includes(c.phrase.toLowerCase())) {
+      const examples = generateSuggestedExamples(c.phrase, c.meaningVi, 'phrase', contextSentence);
+      const collocations = findRelatedCollocations(c.phrase);
       return {
         word: c.phrase,
         phonetic: `/${c.phrase}/`,
@@ -111,6 +293,8 @@ export function lookupWordLocal(rawText: string, contextSentence: string = ''): 
         definitionEn: c.explanation || `Thành ngữ/Collocation thường gặp: "${c.phrase}"`,
         example: contextSentence || c.phrase,
         exampleVi: c.meaningVi,
+        suggestedExamples: examples,
+        collocations: collocations.length > 0 ? collocations : undefined,
       };
     }
   }
@@ -118,6 +302,8 @@ export function lookupWordLocal(rawText: string, contextSentence: string = ''): 
   // 2. Check Curated Local TOEIC Dictionary
   if (TOEIC_LOCAL_DICTIONARY[clean]) {
     const item = TOEIC_LOCAL_DICTIONARY[clean];
+    const examples = generateSuggestedExamples(rawText.trim(), item.vi, item.pos, contextSentence);
+    const collocations = findRelatedCollocations(clean);
     return {
       word: rawText.trim(),
       phonetic: item.ipa,
@@ -125,12 +311,16 @@ export function lookupWordLocal(rawText: string, contextSentence: string = ''): 
       meaningVi: item.vi,
       definitionEn: item.defEn || `TOEIC core vocabulary: "${rawText.trim()}"`,
       example: contextSentence || rawText.trim(),
+      suggestedExamples: examples,
+      collocations: collocations.length > 0 ? collocations : undefined,
     };
   }
 
   // 3. Check LEXICON
   if (LEXICON[clean]) {
     const item = LEXICON[clean];
+    const examples = generateSuggestedExamples(rawText.trim(), item.meaningVi, item.pos || 'noun', contextSentence);
+    const collocations = findRelatedCollocations(clean);
     return {
       word: rawText.trim(),
       phonetic: item.ipa,
@@ -138,6 +328,8 @@ export function lookupWordLocal(rawText: string, contextSentence: string = ''): 
       meaningVi: item.meaningVi,
       definitionEn: `Thuật ngữ kinh doanh & bài thi TOEIC: "${rawText.trim()}"`,
       example: contextSentence || rawText.trim(),
+      suggestedExamples: examples,
+      collocations: collocations.length > 0 ? collocations : undefined,
     };
   }
 
@@ -147,6 +339,8 @@ export function lookupWordLocal(rawText: string, contextSentence: string = ''): 
     (w: Word) => w.word.toLowerCase() === clean || w.word.toLowerCase() === rawText.toLowerCase().trim()
   );
   if (fromCurriculum) {
+    const examples = generateSuggestedExamples(fromCurriculum.word, fromCurriculum.meaningVi, fromCurriculum.partOfSpeech, contextSentence);
+    const collocations = findRelatedCollocations(clean);
     return {
       word: fromCurriculum.word,
       phonetic: fromCurriculum.phonetic,
@@ -155,6 +349,9 @@ export function lookupWordLocal(rawText: string, contextSentence: string = ''): 
       definitionEn: fromCurriculum.definitionEn,
       example: contextSentence || fromCurriculum.example,
       exampleVi: fromCurriculum.exampleVi,
+      suggestedExamples: examples,
+      collocations: (fromCurriculum.collocations && fromCurriculum.collocations.length > 0) ? fromCurriculum.collocations : (collocations.length > 0 ? collocations : undefined),
+      synonyms: fromCurriculum.synonyms,
     };
   }
 
@@ -238,6 +435,9 @@ export async function translateWordOnline(text: string, contextSentence: string 
     meaningVi = trimmed;
   }
 
+  const suggestedExamples = generateSuggestedExamples(trimmed, meaningVi, partOfSpeech, contextSentence);
+  const collocations = findRelatedCollocations(trimmed);
+
   return {
     word: trimmed,
     phonetic,
@@ -245,6 +445,8 @@ export async function translateWordOnline(text: string, contextSentence: string 
     meaningVi,
     definitionEn,
     example: contextSentence || trimmed,
+    suggestedExamples,
+    collocations: collocations.length > 0 ? collocations : undefined,
     isOnlineTranslated: true,
   };
 }

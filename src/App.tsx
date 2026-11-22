@@ -17,6 +17,7 @@ import { ErrorVaultModal } from './components/ErrorVaultModal';
 import { SurvivalSpeedMatchModal } from './components/SurvivalSpeedMatchModal';
 import { BadgesModal } from './components/BadgesModal';
 import { getErrorVault } from './utils/errorVault';
+import { getAppNavigationState, saveAppNavigationState } from './utils/sessionPersistence';
 import { TOEICPhase } from './data/toeicSkillData';
 import { playSound } from './utils/audio';
 import { Target, Trophy, Sparkles, Award, ShieldCheck, BookOpen } from 'lucide-react';
@@ -52,7 +53,9 @@ export const App: React.FC = () => {
   const [isSpeedMatchOpen, setIsSpeedMatchOpen] = useState(false);
   const [isBadgesOpen, setIsBadgesOpen] = useState(false);
   const [errorVaultCount, setErrorVaultCount] = useState<number>(() => getErrorVault().length);
-  const [mobileTab, setMobileTab] = useState<MobileTab>('study');
+  const savedNav = getAppNavigationState();
+
+  const [mobileTab, setMobileTab] = useState<MobileTab>(savedNav?.mobileTab || 'study');
 
   useEffect(() => {
     const updateVaultCount = () => {
@@ -68,6 +71,9 @@ export const App: React.FC = () => {
 
   // 3-Phase Study Progression State
   const [currentPhase, setCurrentPhase] = useState<TOEICPhase>(() => {
+    if (savedNav?.currentPhase && ['foundation', 'acceleration', 'mock_exam'].includes(savedNav.currentPhase)) {
+      return savedNav.currentPhase;
+    }
     if (typeof window === 'undefined') return 'foundation';
     const saved = localStorage.getItem('toeic_study_phase') as TOEICPhase;
     if (saved && ['foundation', 'acceleration', 'mock_exam'].includes(saved)) {
@@ -82,11 +88,21 @@ export const App: React.FC = () => {
     } catch {}
   }, [currentPhase]);
 
-  // Selected Topic (Default to first topic of current phase)
+  // Selected Topic (Default to first topic of current phase, or restored topic)
   const [selectedTopicId, setSelectedTopicId] = useState<string>(() => {
+    if (savedNav?.selectedTopicId) return savedNav.selectedTopicId;
     if (activeTopicId && activeTopicId !== 'all') return activeTopicId;
     return topics[0]?.id || 'day-1-contracts-warranties';
   });
+
+  // Auto-save app navigation state
+  useEffect(() => {
+    saveAppNavigationState({
+      selectedTopicId,
+      mobileTab,
+      currentPhase,
+    });
+  }, [selectedTopicId, mobileTab, currentPhase]);
 
   // Keep topic in sync when switching phases
   const handleSelectPhase = (phase: TOEICPhase) => {
