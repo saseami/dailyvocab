@@ -11,6 +11,7 @@ import { TextSelectionLearner } from './components/TextSelectionLearner';
 import { MobileBottomNav, MobileTab } from './components/MobileBottomNav';
 import { MobileNotebookTab } from './components/MobileNotebookTab';
 import { MobileProfileTab } from './components/MobileProfileTab';
+import { ProfileSwitcherModal } from './components/ProfileSwitcherModal';
 import { TOEICPhase } from './data/toeicSkillData';
 import { playSound } from './utils/audio';
 import { Target, Trophy, Sparkles, Award, ShieldCheck, BookOpen } from 'lucide-react';
@@ -32,10 +33,16 @@ export const App: React.FC = () => {
     deleteCustomWord,
     triggerCelebration,
     importProgress,
+    profiles,
+    activeProfile,
+    createProfile,
+    switchProfile,
+    deleteProfile,
   } = useVocabStore();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<MobileTab>('study');
 
   // 3-Phase Study Progression State
@@ -269,6 +276,8 @@ export const App: React.FC = () => {
               theme={theme}
               onThemeChange={setTheme}
               onImportProgress={importProgress}
+              activeProfile={activeProfile}
+              onOpenProfileSwitcher={() => setIsProfileModalOpen(true)}
             />
           )}
         </div>
@@ -281,6 +290,17 @@ export const App: React.FC = () => {
         notebookBadgeCount={progress.bookmarkedWords.length + progress.customWords.length}
         streak={progress.streak}
         currentPhaseTag={currentPhase === 'foundation' ? 'GD 1' : currentPhase === 'acceleration' ? 'GD 2' : 'GD 3'}
+      />
+
+      {/* Profile Switcher Modal */}
+      <ProfileSwitcherModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        profiles={profiles}
+        activeProfileId={activeProfile.id}
+        onSwitchProfile={switchProfile}
+        onCreateProfile={createProfile}
+        onDeleteProfile={deleteProfile}
       />
 
       {/* Floating Add Word & Stats Modals */}

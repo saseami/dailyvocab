@@ -1,10 +1,10 @@
 import React, { useRef, useMemo } from 'react';
-import { UserProgress } from '../types';
+import { UserProgress, UserProfile } from '../types';
 import { 
   User, Flame, Trophy, Award, Moon, Sun, Download, Upload, 
   RotateCcw, Sparkles, Smartphone, CheckCircle2, ShieldCheck, 
   BookOpen, Heart, ArrowUpRight, BarChart3, HelpCircle, AlertCircle,
-  Headphones, Layers, Mic, CheckCircle, ChevronRight
+  Headphones, Layers, Mic, CheckCircle, ChevronRight, Users
 } from 'lucide-react';
 import { playSound } from '../utils/audio';
 import { getTopicSkillsProgressMap } from '../utils/topicProgress';
@@ -15,6 +15,8 @@ interface MobileProfileTabProps {
   theme: 'light' | 'dark' | 'system';
   onThemeChange: (theme: 'light' | 'dark' | 'system') => void;
   onImportProgress: (data: UserProgress) => void;
+  activeProfile?: UserProfile;
+  onOpenProfileSwitcher?: () => void;
 }
 
 export const MobileProfileTab: React.FC<MobileProfileTabProps> = ({
@@ -23,6 +25,8 @@ export const MobileProfileTab: React.FC<MobileProfileTabProps> = ({
   theme,
   onThemeChange,
   onImportProgress,
+  activeProfile,
+  onOpenProfileSwitcher,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -169,6 +173,36 @@ export const MobileProfileTab: React.FC<MobileProfileTabProps> = ({
       {/* KHỐI 1: BÁO CÁO NĂNG LỰC KHÁCH QUAN DỰA TRÊN DỮ LIỆU THỰC TẾ */}
       <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-[#801732] via-[#681026] to-[#420716] text-white shadow-md relative overflow-hidden">
         <div className="absolute top-0 right-0 w-36 h-36 bg-white/5 rounded-full blur-2xl pointer-events-none" />
+
+        {/* Thanh Chọn & Chuyển Đổi Hồ Sơ Người Học */}
+        <div className="flex items-center justify-between mb-3.5 bg-black/25 p-2 rounded-2xl border border-white/10">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-xl flex-shrink-0 shadow-xs">
+              {activeProfile?.avatar || '🦁'}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="font-extrabold text-sm text-white truncate">
+                  {activeProfile?.name || 'Saseami'}
+                </span>
+                <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 flex-shrink-0">
+                  🎯 {activeProfile?.targetScore || 850}+
+                </span>
+              </div>
+              <span className="text-[10px] text-rose-200/90 block truncate">
+                Đang dùng hồ sơ này
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={onOpenProfileSwitcher}
+            className="px-2.5 py-1.5 rounded-xl bg-white text-[#801732] hover:bg-rose-50 text-xs font-black flex items-center gap-1 shadow-xs active:scale-95 transition-all flex-shrink-0"
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Đổi Hồ Sơ</span>
+          </button>
+        </div>
 
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2.5">

@@ -52,4 +52,13 @@ export interface UserProgress {
   customWords: Word[];
 }
 
+export interface UserProfile {
+  id: string;
+  name: string;
+  avatar: string; // Emoji avatar: 🦁, 🎯, 🚀, 👑, ⭐, 🦉, 🦊, 🏆
+  targetScore: number; // 450 | 600 | 750 | 850 | 990
+  createdAt: string;
+  progress: UserProgress;
+}
+
 export type LearningMode = 'learn' | 'flashcard' | 'speaking' | 'writing' | 'quiz' | 'spelling' | 'match';
