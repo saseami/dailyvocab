@@ -7,6 +7,7 @@ export type TOEICSkill = 'vocabulary' | 'listening' | 'reading' | 'speaking' | '
 export interface ListeningQuestion {
   id: string;
   part: 1 | 2 | 3 | 4;
+  skill?: 'listening';
   phase: TOEICPhase;
   title: string;
   audioPrompt?: string; // Spoken text via Web Speech API or audio file
@@ -26,6 +27,7 @@ export interface ListeningQuestion {
 export interface ReadingQuestion {
   id: string;
   part: 5 | 6 | 7;
+  skill?: 'reading';
   phase: TOEICPhase;
   category: string; // 'Grammar: Verb Tense', 'Vocabulary: Word Form', 'Part 7: Double Passage', etc.
   passage?: string; // For Part 6 and Part 7
@@ -410,6 +412,324 @@ Use coupon code ETS2026SAVE at checkout. Valid until the end of the month.`,
   },
 ];
 
+export const TOEIC_ADVANCED_LISTENING_ADDITIONS: ListeningQuestion[] = [
+  {
+    id: 'l-p1-adv-01',
+    part: 1,
+    phase: 'mock_exam',
+    title: 'Part 1: Cuộc họp thảo luận dự án tại phòng hội đồng',
+    audioPrompt: 'A. They are painting the conference table. B. They are looking at a presentation on the screen. C. They are exiting the boardroom. D. They are eating lunch in the cafeteria.',
+    imageType: 'boardroom-meeting',
+    scenario: 'Two executives seated across a conference table reviewing project plans.',
+    questionText: 'Look at the photo and listen to the statements. Choose the best description.',
+    options: [
+      { key: 'A', text: 'A. They are painting the conference table.' },
+      { key: 'B', text: 'B. They are looking at a presentation on the screen.' },
+      { key: 'C', text: 'C. They are exiting the boardroom.' },
+      { key: 'D', text: 'D. They are eating lunch in the cafeteria.' }
+    ],
+    correctAnswer: 'B',
+    transcript: '(A) They are painting the conference table. (B) They are looking at a presentation on the screen. (C) They are exiting the boardroom. (D) They are eating lunch in the cafeteria.',
+    sentenceTranslationVi: '(B) Họ đang cùng quan sát bài thuyết trình trên màn hình trong phòng họp.',
+    explanationVi: 'Phương án B miêu tả chính xác hành động của hai người trong phòng hội đồng đang tập trung theo dõi slide thuyết trình.',
+    trapType: 'Sound Trap & Wrong Action',
+    keywords: ['presentation', 'boardroom', 'conference', 'screen']
+  },
+  {
+    id: 'l-p1-adv-02',
+    part: 1,
+    phase: 'mock_exam',
+    title: 'Part 1: Khách hàng ngồi tại quán cà phê ngoài trời',
+    audioPrompt: 'A. Customers are seated outdoors beneath umbrellas. B. The restaurant is closed for renovations. C. Vehicles are parked on the sidewalk. D. A waiter is washing the windows.',
+    imageType: 'cafe-patio',
+    scenario: 'Customers seated at outdoor patio tables under sun umbrellas.',
+    questionText: 'Look at the photo and listen to the statements. Choose the best description.',
+    options: [
+      { key: 'A', text: 'A. Customers are seated outdoors beneath umbrellas.' },
+      { key: 'B', text: 'B. The restaurant is closed for renovations.' },
+      { key: 'C', text: 'C. Vehicles are parked on the sidewalk.' },
+      { key: 'D', text: 'D. A waiter is washing the windows.' }
+    ],
+    correctAnswer: 'A',
+    transcript: '(A) Customers are seated outdoors beneath umbrellas. (B) The restaurant is closed for renovations. (C) Vehicles are parked on the sidewalk. (D) A waiter is washing the windows.',
+    sentenceTranslationVi: '(A) Các khách hàng đang ngồi ngoài trời bên dưới những chiếc ô che nắng.',
+    explanationVi: 'Phương án A miêu tả đúng cảnh thực tế với khách hàng ngồi uống nước tại khu vực bàn ngoài trời có ô che.',
+    trapType: 'Distractor Action',
+    keywords: ['seated outdoors', 'umbrellas', 'patio', 'customers']
+  },
+  {
+    id: 'l-p2-adv-01',
+    part: 2,
+    phase: 'mock_exam',
+    title: 'Part 2: Bẫy câu trả lời gián tiếp - Trì hoãn ngân sách',
+    audioPrompt: 'Has the quarterly budget proposal been submitted to senior management yet?',
+    questionText: 'Has the quarterly budget proposal been submitted to senior management yet?',
+    options: [
+      { key: 'A', text: 'A. Yes, at the downtown department store.' },
+      { key: 'B', text: 'B. Linda requested a two-day extension to review the figures.' },
+      { key: 'C', text: 'C. About twenty-five thousand dollars.' }
+    ],
+    correctAnswer: 'B',
+    transcript: 'Question: Has the quarterly budget proposal been submitted to senior management yet? (A) Yes, at the downtown department store. (B) Linda requested a two-day extension to review the figures. (C) About twenty-five thousand dollars.',
+    sentenceTranslationVi: 'Bản đề xuất ngân sách quý đã được nộp lên ban giám đốc chưa? -> (B) Linda đã xin gia hạn thêm hai ngày để kiểm tra lại các số liệu.',
+    explanationVi: 'Bẫy câu trả lời gián tiếp phổ biến trong TOEIC Target 800+: Người nói không trả lời trực tiếp Yes/No mà đưa ra lý do tại sao chưa nộp (xin gia hạn thêm 2 ngày).',
+    trapType: 'Indirect Response Trap',
+    keywords: ['budget proposal', 'submitted', 'extension', 'figures']
+  },
+  {
+    id: 'l-p2-adv-02',
+    part: 2,
+    phase: 'mock_exam',
+    title: 'Part 2: Câu hỏi phủ định gợi ý hành động (Shouldn\'t we...)',
+    audioPrompt: 'Shouldn\'t we reserve the conference auditorium before the weekend?',
+    questionText: 'Shouldn\'t we reserve the conference auditorium before the weekend?',
+    options: [
+      { key: 'A', text: 'A. Mark already confirmed the booking this morning.' },
+      { key: 'B', text: 'B. No, the weekend was very quiet.' },
+      { key: 'C', text: 'C. To attend the keynote lecture.' }
+    ],
+    correctAnswer: 'A',
+    transcript: 'Question: Shouldn\'t we reserve the conference auditorium before the weekend? (A) Mark already confirmed the booking this morning. (B) No, the weekend was very quiet. (C) To attend the keynote lecture.',
+    sentenceTranslationVi: 'Chẳng phải chúng ta nên đặt trước hội trường hội nghị trước cuối tuần sao? -> (A) Sáng nay Mark đã xác nhận đặt chỗ rồi.',
+    explanationVi: 'Phương án A giải quyết trực tiếp mối bận tâm bằng cách thông báo việc đặt phòng đã được người khác hoàn thành vào sáng nay.',
+    trapType: 'Sound Repetition & Purpose Trap',
+    keywords: ['reserve', 'auditorium', 'confirmed', 'booking']
+  },
+  {
+    id: 'l-p3-adv-01',
+    part: 3,
+    phase: 'mock_exam',
+    title: 'Part 3: Hội thoại đàm phán chuỗi cung ứng linh kiện',
+    audioPrompt: 'Man: Hello Sarah, our primary electronics supplier notified us that the microchip shipment will be delayed by three weeks due to port congestion. Woman: That is going to disrupt our production schedule for the new prototype. Should we expedite parts from our backup supplier in Taiwan? Man: Their unit cost is about 8% higher, but they guarantee delivery within four business days. Woman: Please proceed with Taiwan immediately. Meeting our launch deadline is our highest priority.',
+    questionText: 'Why is the woman willing to pay higher prices for replacement parts?',
+    options: [
+      { key: 'A', text: 'A. To secure a new patent registration' },
+      { key: 'B', text: 'B. To prevent a delay in product launch' },
+      { key: 'C', text: 'C. To establish an office branch in Taiwan' },
+      { key: 'D', text: 'D. To conduct a quality assurance audit' }
+    ],
+    correctAnswer: 'B',
+    transcript: 'Why is the woman willing to pay higher prices for replacement parts? Woman: "Please proceed with Taiwan immediately. Meeting our launch deadline is our highest priority."',
+    sentenceTranslationVi: 'Tại sao người phụ nữ sẵn sàng chi trả mức giá linh kiện cao hơn? -> Để tránh làm chậm tiến độ ra mắt sản phẩm (Meeting our launch deadline is our highest priority).',
+    explanationVi: 'Chi tiết quan trọng ở câu kết của người phụ nữ: "Meeting our launch deadline is our highest priority" tương đương với "To prevent a delay in product launch".',
+    trapType: 'Paraphrasing Trap',
+    keywords: ['supplier', 'shipment delayed', 'expedite', 'launch deadline']
+  },
+  {
+    id: 'l-p4-adv-01',
+    part: 4,
+    phase: 'mock_exam',
+    title: 'Part 4: Thông báo phát thanh khẩn cấp tại sân bay quốc tế',
+    audioPrompt: 'May I have your attention, please. Passengers on flight VN384 departing for Tokyo Haneda, our aircraft is experiencing a minor electrical inspection at Gate 12. Boarding will be postponed until 4:15 PM. Passengers needing special assistance or traveling with infants should report to the customer service podium near Gate 14. We apologize for the inconvenience and complimentary beverage vouchers are available on your mobile boarding pass.',
+    questionText: 'What compensation is offered to the delayed passengers?',
+    options: [
+      { key: 'A', text: 'A. Hotel overnight accommodations' },
+      { key: 'B', text: 'B. Complimentary beverage vouchers' },
+      { key: 'C', text: 'C. Free upgrade to first class' },
+      { key: 'D', text: 'D. Full cash refund at the gate' }
+    ],
+    correctAnswer: 'B',
+    transcript: 'What compensation is offered to the delayed passengers? Speaker: "...complimentary beverage vouchers are available on your mobile boarding pass."',
+    sentenceTranslationVi: 'Khoản đền bù nào được cung cấp cho hành khách bị hoãn chuyến bay? -> Phiếu đồ uống miễn phí (complimentary beverage vouchers).',
+    explanationVi: 'Nghe từ khóa "complimentary beverage vouchers" ở câu kết của thông báo sân bay.',
+    trapType: 'Excessive Compensation Distractor',
+    keywords: ['postponed', 'complimentary beverage vouchers', 'boarding pass']
+  },
+  {
+    id: 'l-p4-adv-02',
+    part: 4,
+    phase: 'mock_exam',
+    title: 'Part 4: Lời nhắn hộp thư thoại - Đàm phán hợp đồng cho thuê',
+    audioPrompt: 'Good afternoon, Mr. Ramirez. This is Christine from Apex Commercial Real Estate. I am following up on your inquiry regarding the office suite on the 14th floor. The landlord agreed to waive the parking fee for the first year, provided that you sign a minimum three-year lease agreement by Friday. Please call me back before 5:00 PM today so we can finalize the paperwork.',
+    questionText: 'What incentive did the building landlord offer?',
+    options: [
+      { key: 'A', text: 'A. Two months of free office rent' },
+      { key: 'B', text: 'B. Waived parking fees for the first year' },
+      { key: 'C', text: 'C. Complementary office furniture' },
+      { key: 'D', text: 'D. Free fiber optic internet installation' }
+    ],
+    correctAnswer: 'B',
+    transcript: 'What incentive did the building landlord offer? Speaker: "The landlord agreed to waive the parking fee for the first year, provided that you sign a minimum three-year lease agreement..."',
+    sentenceTranslationVi: 'Chủ tòa nhà đã đưa ra ưu đãi nào? -> Miễn phí gửi xe trong năm đầu tiên (waive the parking fee for the first year).',
+    explanationVi: 'Cụm từ "waive the parking fee" (miễn phí giữ xe) tương đương với "Waived parking fees".',
+    trapType: 'Misleading Incentive Trap',
+    keywords: ['landlord', 'waive parking fee', 'lease agreement']
+  }
+];
+
+export const TOEIC_ADVANCED_READING_ADDITIONS: ReadingQuestion[] = [
+  {
+    id: 'r-p5-adv-01',
+    part: 5,
+    phase: 'mock_exam',
+    category: 'Ngữ pháp Nâng cao: Đảo ngữ câu điều kiện loại 1 (Inverted Conditional with Should)',
+    questionText: '------- you require any supplementary documentation regarding the patent application, please contact our legal counsel immediately.',
+    options: [
+      { key: 'A', text: 'A. Should' },
+      { key: 'B', text: 'B. Unless' },
+      { key: 'C', text: 'C. Provided' },
+      { key: 'D', text: 'D. Whether' }
+    ],
+    correctAnswer: 'A',
+    sentenceTranslationVi: 'Nếu quý vị cần bất kỳ tài liệu bổ sung nào liên quan đến đơn đăng ký bằng sáng chế, vui lòng liên hệ ngay với cố vấn pháp lý của chúng tôi.',
+    explanationVi: 'Cấu trúc đảo ngữ câu điều kiện loại 1 trang trọng trong thư từ kinh doanh: "Should + S + V-nguyên thể" thay thế cho "If + S + V-hiện tại đơn".',
+    grammarRuleVi: 'Should + S + V (bare-inf) = If + S + V (present simple)',
+    trapType: 'Inversion Grammar Trap',
+  },
+  {
+    id: 'r-p5-adv-02',
+    part: 5,
+    phase: 'mock_exam',
+    category: 'Từ vựng Nâng cao: Collocation thương mại & Quy chuẩn an toàn',
+    questionText: 'All laboratory technicians are strictly required to adhere ------- the revised biosafety protocols published last week.',
+    options: [
+      { key: 'A', text: 'A. at' },
+      { key: 'B', text: 'B. to' },
+      { key: 'C', text: 'C. with' },
+      { key: 'D', text: 'D. for' }
+    ],
+    correctAnswer: 'B',
+    sentenceTranslationVi: 'Tất cả kỹ thuật viên phòng thí nghiệm được yêu cầu nghiêm ngặt phải tuân thủ các quy chuẩn an toàn sinh học sửa đổi vừa được công bố tuần trước.',
+    explanationVi: 'Cụm từ cố định chuẩn TOEIC: "adhere to something" (tuân thủ theo, làm theo quy tắc/tiêu chuẩn).',
+    grammarRuleVi: 'adhere to = comply with = conform to = abide by',
+    trapType: 'Preposition Collocation Trap',
+  },
+  {
+    id: 'r-p5-adv-03',
+    part: 5,
+    phase: 'mock_exam',
+    category: 'Ngữ pháp: Liên từ chỉ sự nhượng bộ (Concession Clause)',
+    questionText: '------- the unexpected surge in raw material costs, Apex Manufacturing managed to maintain strong profit margins during the third quarter.',
+    options: [
+      { key: 'A', text: 'A. Even though' },
+      { key: 'B', text: 'B. In spite of' },
+      { key: 'C', text: 'C. Because' },
+      { key: 'D', text: 'D. Whereas' }
+    ],
+    correctAnswer: 'B',
+    sentenceTranslationVi: 'Bất chấp sự gia tăng bất ngờ về chi phí nguyên vật liệu thô, Công ty Sản xuất Apex vẫn duy trì được biên lợi nhuận vững chắc trong quý 3.',
+    explanationVi: 'Phía sau chỗ trống là một cụm danh từ "the unexpected surge in raw material costs", do đó cần một giới từ như "In spite of" hoặc "Despite" chứ không dùng liên từ có mệnh đề "Even though".',
+    grammarRuleVi: 'In spite of / Despite + Noun/V-ing; Even though / Although + S + V',
+    trapType: 'Conjunction vs Preposition Trap',
+  },
+  {
+    id: 'r-p5-adv-04',
+    part: 5,
+    phase: 'mock_exam',
+    category: 'Từ vựng: Trạng từ nhấn mạnh mức độ hoàn toàn (Degree Adverbs)',
+    questionText: 'The newly recruited human resources director is ------- familiar with international employment labor regulations.',
+    options: [
+      { key: 'A', text: 'A. thoroughly' },
+      { key: 'B', text: 'B. thoroughlyness' },
+      { key: 'C', text: 'C. thorough' },
+      { key: 'D', text: 'D. more thorough' }
+    ],
+    correctAnswer: 'A',
+    sentenceTranslationVi: 'Giám đốc nhân sự mới được tuyển dụng rất am hiểu thấu đáo về các quy định luật lao động quốc tế.',
+    explanationVi: 'Vị trí giữa to-be ("is") và tính từ ("familiar") cần một trạng từ ("thoroughly") để bổ nghĩa cho tính từ.',
+    grammarRuleVi: 'Be + Adverb + Adjective',
+    trapType: 'Word Form Trap',
+  },
+  {
+    id: 'r-p6-adv-01',
+    part: 6,
+    phase: 'mock_exam',
+    category: 'Part 6: Điền từ vào Thông báo Sáp nhập Doanh nghiệp (Corporate Memo)',
+    passageTitle: 'INTERNAL MEMORANDUM: CORPORATE RESTRUCTURING UPDATE',
+    passageType: 'Memo',
+    passage: `To: All Staff Members
+From: Executive Committee, Crestview Holdings
+Date: November 15, 2026
+Subject: Completion of Strategic Merger
+
+We are pleased to announce that Crestview Holdings has successfully finalized its strategic acquisition of Nexa Logistics. This partnership will allow us to expand our distribution network across Southeast Asia.
+
+------- [Q1]. Consequently, our operational capacity will increase by an estimated 40 percent before the end of the fiscal year.
+
+All current employees will retain their positions without disruption. Human Resources will conduct informational webinars next Tuesday to address questions regarding employee benefits.`,
+    questionText: 'Which sentence best fits into the passage at [Q1]?',
+    options: [
+      { key: 'A', text: 'A. All travel reimbursement requests must be submitted by Friday afternoon.' },
+      { key: 'B', text: 'B. By integrating Nexa\'s automated fulfillment centers, we can streamline cargo handling.' },
+      { key: 'C', text: 'C. The annual company banquet has been relocated to the downtown convention hall.' },
+      { key: 'D', text: 'D. Nexa Logistics was founded twenty years ago as a small local courier.' }
+    ],
+    correctAnswer: 'B',
+    sentenceTranslationVi: 'Bằng cách tích hợp các trung tâm xử lý đơn hàng tự động của Nexa, chúng ta có thể tối ưu hóa quy trình vận chuyển hàng hóa.',
+    explanationVi: 'Câu B kết nối logic hoàn hảo giữa việc mở rộng mạng lưới phân phối ở câu trước với kết quả "công suất vận hành tăng 40%" ở câu tiếp theo.',
+    trapType: 'Sentence Insertion Context Trap',
+  },
+  {
+    id: 'r-p7-adv-01',
+    part: 7,
+    phase: 'mock_exam',
+    category: 'Part 7: Đọc hiểu Bài đọc kép (Double Passage) - Email & Báo giá Hợp đồng IT',
+    passageTitle: 'DOCUMENT 1: EMAIL INQUIRY & DOCUMENT 2: SERVICE ESTIMATE',
+    passageType: 'Email',
+    passage: `[DOCUMENT 1: EMAIL INQUIRY]
+From: Marcus Vance (mvance@vancearchitects.com)
+To: Sales Department, CloudCore Solutions (sales@cloudcore.io)
+Date: October 10, 2026
+Subject: Enterprise Cloud Migration Quote
+
+Dear CloudCore Team,
+Our architecture firm has 45 workstation users currently storing CAD designs on local servers. We need to migrate all files to a secure cloud platform with real-time file versioning and automated daily off-site backups. We need the transition completed prior to December 1. Could you send an itemized estimate?
+Sincerely, Marcus Vance
+
+----------------------------------------------------------------------
+[DOCUMENT 2: ITEMISED SERVICE ESTIMATE - CLOUDCORE SOLUTIONS]
+Estimate #: CC-8924 | Date: October 12, 2026 | Prepared for: Vance Architects
+- Cloud Storage Tier 3 (Up to 10 TB encrypted): $450/month
+- User Licenses (45 user accounts @ $15/user): $675/month
+- Initial Data Migration & Setup Assistance: $1,200 (One-time fee)
+- Expedited 14-day Deployment Guarantee: $400 (Optional)
+*Special Promotional Term: Clients signing a 24-month service commitment receive a 10% discount on monthly recurring charges.`,
+    questionText: 'According to both documents, how much would Vance Architects pay each month if they commit to a 24-month agreement?',
+    options: [
+      { key: 'A', text: 'A. $1,012.50' },
+      { key: 'B', text: 'B. $1,125.00' },
+      { key: 'C', text: 'C. $950.00' },
+      { key: 'D', text: 'D. $1,200.00' }
+    ],
+    correctAnswer: 'A',
+    sentenceTranslationVi: 'Theo cả hai tài liệu, Vance Architects sẽ phải trả bao nhiêu tiền mỗi tháng nếu ký cam kết hợp đồng 24 tháng? -> $1,012.50/tháng (Tổng $450 + $675 = $1,125, giảm 10% còn $1,012.50).',
+    explanationVi: 'Đây là dạng câu hỏi liên kết hai văn bản (Cross-document inference): Tổng phí định kỳ hàng tháng là $450 (Storage) + $675 (Licenses) = $1,125. Khi ký hợp đồng 24 tháng được giảm 10% của $1,125 = giảm $112.50 -> Số tiền hàng tháng là $1,012.50.',
+    trapType: 'Cross-document Calculation Trap',
+  },
+  {
+    id: 'r-p7-adv-02',
+    part: 7,
+    phase: 'mock_exam',
+    category: 'Part 7: Đọc hiểu Bài đọc kép - Yêu cầu thời hạn dự án',
+    passageTitle: 'DOCUMENT 1 & 2 (REFER TO EMAIL CC-8924)',
+    passageType: 'Email',
+    passage: `Refer to the email and service estimate from CloudCore Solutions above.`,
+    questionText: 'Why might Vance Architects choose to include the optional $400 fee in their project?',
+    options: [
+      { key: 'A', text: 'A. To ensure the transition finishes before their December 1 deadline' },
+      { key: 'B', text: 'B. To upgrade their storage capacity to unlimited bandwidth' },
+      { key: 'C', text: 'C. To obtain onsite weekend technical support training' },
+      { key: 'D', text: 'D. To purchase custom computer hardware workstations' }
+    ],
+    correctAnswer: 'A',
+    sentenceTranslationVi: 'Tại sao Vance Architects có thể chọn thêm khoản phí tùy chọn $400 vào dự án? -> Để đảm bảo quá trình chuyển đổi hoàn tất trước thời hạn ngày 1 tháng 12 của họ.',
+    explanationVi: 'Trong Email, ông Marcus Vance nhấn mạnh: "We need the transition completed prior to December 1". Ở Báo giá, khoản phí $400 tùy chọn là "Expedited 14-day Deployment Guarantee" (Cam kết triển khai nhanh trong 14 ngày).',
+    trapType: 'Cross-document Paraphrasing Trap',
+  }
+];
+
+// Combined Question Pools for the 3 distinct exams:
+export const TOEIC_DIAGNOSTIC_LR_QUESTIONS: (ListeningQuestion | ReadingQuestion)[] = [
+  ...TOEIC_LISTENING_QUESTIONS.map(q => ({ ...q, skill: 'listening' as const })),
+  ...TOEIC_READING_QUESTIONS.map(q => ({ ...q, skill: 'reading' as const }))
+];
+
+export const TOEIC_ADVANCED_LR_QUESTIONS: (ListeningQuestion | ReadingQuestion)[] = [
+  ...TOEIC_DIAGNOSTIC_LR_QUESTIONS,
+  ...TOEIC_ADVANCED_LISTENING_ADDITIONS.map(q => ({ ...q, skill: 'listening' as const })),
+  ...TOEIC_ADVANCED_READING_ADDITIONS.map(q => ({ ...q, skill: 'reading' as const }))
+];
+
 // -------------------------------------------------------------
 // 3. FULL MOCK EXAM SETS (ETS STANDARD TIMED SIMULATION)
 // -------------------------------------------------------------
@@ -421,26 +741,35 @@ export interface MockExamMetadata {
   totalQuestions: number;
   targetBand: string;
   descriptionVi: string;
+  formatBadge: string;
+  skillsFocus: string;
+  features: string[];
 }
 
 export const MOCK_EXAM_LIST: MockExamMetadata[] = [
   {
     id: 'mock-lr-mini-01',
-    name: 'ETS Quick Check 50 (Mini Mock Exam LR)',
+    name: 'ETS Quick Check 16 (Mini Mock Exam LR)',
     type: 'mini_test',
-    durationMinutes: 30,
-    totalQuestions: 50,
-    targetBand: 'Tất cả cấp độ (Chẩn đoán nhanh)',
-    descriptionVi: 'Bộ đề thi rút gọn 50 câu bao quát cả 7 Part của bài thi Listening & Reading, giúp kiểm tra nhanh trình độ và phát hiện lỗ hổng kiến thức trong 30 phút.',
+    durationMinutes: 20,
+    totalQuestions: 16,
+    targetBand: 'Chẩn đoán 450 - 750+',
+    descriptionVi: 'Bộ đề thi rút gọn 16 câu bao quát đủ 7 Part của bài thi Listening & Reading, giúp kiểm tra nhanh trình độ và phát hiện lỗ hổng kiến thức trong 20 phút.',
+    formatBadge: '⚡ ĐỀ RÚT GỌN 20 PHÚT',
+    skillsFocus: 'Nghe & Đọc (Trắc nghiệm)',
+    features: ['16 câu trắc nghiệm 7 Part', 'Audio phát âm giọng chuẩn ETS', 'Chẩn đoán nhanh Band điểm 10-990']
   },
   {
     id: 'mock-lr-full-01',
-    name: 'ETS Actual Test 2026 - Test 01 (Full LR 200 Câu)',
+    name: 'ETS Actual Test 2026 - Test 01 (Thực Chiến 30 Câu Nâng Cao)',
     type: 'full_test_lr',
-    durationMinutes: 120,
-    totalQuestions: 200,
+    durationMinutes: 45,
+    totalQuestions: 30,
     targetBand: 'Mục tiêu 800 - 990',
-    descriptionVi: 'Đề thi thực chiến 100 câu Listening (45 phút) + 100 câu Reading (75 phút) chuẩn thời gian thực, có audio bản ngữ, đáp án chi tiết và bảng quy đổi điểm số chính thức ETS.',
+    descriptionVi: 'Đề thi thực chiến chuyên sâu 30 câu Listening & Reading với bẫy gián tiếp Part 2, hội thoại 3 người Part 3, đảo ngữ Part 5 và bài đọc kép Part 7 chuẩn ETS.',
+    formatBadge: '🎯 ĐỀ NÂNG CAO 45 PHÚT',
+    skillsFocus: 'Nghe & Đọc Chuyên Sâu (Trắc nghiệm)',
+    features: ['30 câu chuyên sâu chuẩn format ETS', 'Bẫy đảo ngữ & Collocation thương mại', 'Bài đọc kép Double Passage email & hóa đơn']
   },
   {
     id: 'mock-sw-full-01',
@@ -448,8 +777,11 @@ export const MOCK_EXAM_LIST: MockExamMetadata[] = [
     type: 'full_test_sw',
     durationMinutes: 80,
     totalQuestions: 19,
-    targetBand: 'Mục tiêu 350 - 400 / 400',
-    descriptionVi: 'Mô phỏng trọn vẹn 11 câu hỏi Speaking (20 phút) và 8 câu hỏi Writing (60 phút). Có ghi âm giọng nói, chấm điểm tự động bằng AI theo rubric chính thức của ETS.',
+    targetBand: 'Mục tiêu 350 - 400 SW',
+    descriptionVi: 'Mô phỏng trọn vẹn 11 câu hỏi Speaking (20 phút) và 8 câu hỏi Writing (60 phút). Có ghi âm giọng nói, hỗ trợ đọc mẫu và chấm điểm tự động bằng AI theo rubric chính thức của ETS.',
+    formatBadge: '🎙️ & ✍️ NÓI & VIẾT 80 PHÚT',
+    skillsFocus: 'Nói & Viết (Ghi âm & Soạn thảo)',
+    features: ['11 câu Speaking thu âm giọng nói', '8 câu Writing soạn email & viết luận', 'Chấm điểm phát âm & ngữ pháp AI thời gian thực']
   },
 ];
 

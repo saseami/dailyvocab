@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   MOCK_EXAM_LIST, MockExamMetadata, TOEIC_LISTENING_QUESTIONS, 
   TOEIC_READING_QUESTIONS, TOEIC_SW_QUESTIONS, SWExamQuestion,
-  ListeningQuestion, ReadingQuestion 
+  ListeningQuestion, ReadingQuestion, TOEIC_DIAGNOSTIC_LR_QUESTIONS,
+  TOEIC_ADVANCED_LR_QUESTIONS
 } from '../data/toeicSkillData';
 import { 
   Trophy, Clock, CheckCircle2, AlertTriangle, Play, RotateCcw, 
   BarChart3, Award, Sparkles, BookOpen, Headphones, ArrowRight, 
   ShieldCheck, Volume2, VolumeX, Pause, RefreshCw, Eye, EyeOff, 
-  Image as ImageIcon, Mic, MicOff, PenTool, Check, AlertCircle, FileText
+  Image as ImageIcon, Mic, MicOff, PenTool, Check, AlertCircle, FileText,
+  HelpCircle, StopCircle, CheckCheck
 } from 'lucide-react';
 import { playSound, speakWord, stopSpeaking } from '../utils/audio';
 import { VoiceRecognitionService, calculatePronunciationScore, isSpeechRecognitionSupported, PronunciationEvaluation } from '../utils/speechRecognition';
@@ -48,12 +50,20 @@ export const ExamSimulator: React.FC = () => {
   const currentExam = MOCK_EXAM_LIST.find(e => e.id === selectedExamId) || MOCK_EXAM_LIST[0];
   const isSWExam = currentExam.type === 'full_test_sw';
 
-  // Determine active questions based on selected exam type
-  const lrQuestions = [
-    ...TOEIC_LISTENING_QUESTIONS.map(q => ({ ...q, skill: 'listening' as const })),
-    ...TOEIC_READING_QUESTIONS.map(q => ({ ...q, skill: 'reading' as const }))
-  ];
-  const testQuestions = isSWExam ? TOEIC_SW_QUESTIONS : lrQuestions;
+  // Determine active questions based on selected exam type:
+  // - Mini Test (mock-lr-mini-01): 16 câu chẩn đoán 7 Part
+  // - Advanced Test (mock-lr-full-01): 30 câu thực chiến nâng cao 800+
+  // - Speaking & Writing (mock-sw-full-01): 19 câu Nói & Viết
+  const testQuestions = useMemo(() => {
+    if (selectedExamId === 'mock-sw-full-01') {
+      return TOEIC_SW_QUESTIONS;
+    }
+    if (selectedExamId === 'mock-lr-full-01') {
+      return TOEIC_ADVANCED_LR_QUESTIONS;
+    }
+    return TOEIC_DIAGNOSTIC_LR_QUESTIONS;
+  }, [selectedExamId]);
+
   const totalQuestions = testQuestions.length;
   const currentQuestion = testQuestions[currentQIndex] || testQuestions[0];
 
@@ -63,7 +73,7 @@ export const ExamSimulator: React.FC = () => {
       (result) => {
         setLiveTranscript(result.transcript);
         if (isSWExam && 'promptText' in currentQuestion) {
-          const target = currentQuestion.promptText;
+          const target = (currentQuestion as SWExamQuestion).promptText;
           const evalResult = calculatePronunciationScore(target, result.transcript);
           setSpeakingEvaluation(evalResult);
 
@@ -93,7 +103,9 @@ export const ExamSimulator: React.FC = () => {
     );
 
     return () => {
-      voiceServiceRef.current?.stop();
+      try {
+        voiceServiceRef.current?.stop();
+      } catch {}
     };
   }, [isSWExam, currentQuestion, currentQIndex]);
 
@@ -164,7 +176,7 @@ export const ExamSimulator: React.FC = () => {
       setSpeakingEvaluation(null);
       setSpeechError('');
 
-      if (!isSWExam && currentQuestion.skill === 'listening' && 'audioPrompt' in currentQuestion && currentQuestion.audioPrompt) {
+      if (!isSWExam && 'part' in currentQuestion && currentQuestion.part <= 4 && 'audioPrompt' in currentQuestion && currentQuestion.audioPrompt) {
         if (autoPlayAudio) {
           const timeout = setTimeout(() => {
             handlePlayCurrentAudio(audioSpeed);
@@ -177,21 +189,55 @@ export const ExamSimulator: React.FC = () => {
     }
   }, [currentQIndex, isTestStarted, isTestSubmitted]);
 
-  // Speaking Recording Toggle
+  // Speaking Recording Toggle & Controls
+  const handleForceStopRecording = () => {
+    try {
+      voiceServiceRef.current?.stop();
+    } catch (e) {
+      console.warn('Error stopping voice recognition:', e);
+    } finally {
+      setIsRecording(false);
+    }
+  };
+
+  const handleSimulateAnswer = () => {
+    handleForceStopRecording();
+    if (isSWExam && 'promptText' in currentQuestion) {
+      const sample = (currentQuestion as SWExamQuestion).sampleAnswer || (currentQuestion as SWExamQuestion).promptText;
+      setLiveTranscript(sample);
+      const evalResult = calculatePronunciationScore((currentQuestion as SWExamQuestion).promptText, sample);
+      setSpeakingEvaluation(evalResult);
+      setSwAnswers(prev => ({
+        ...prev,
+        [currentQIndex]: {
+          text: sample,
+          transcript: sample,
+          score: Math.max(90, evalResult.score),
+        }
+      }));
+      playSound('correct');
+    }
+  };
+
   const toggleRecording = () => {
     setSpeechError('');
     if (isRecording) {
-      voiceServiceRef.current?.stop();
-      setIsRecording(false);
+      handleForceStopRecording();
     } else {
       setLiveTranscript('');
       setSpeakingEvaluation(null);
-      const started = voiceServiceRef.current?.start();
-      if (started) {
-        setIsRecording(true);
-        playSound('click');
-      } else {
-        setSpeechError('Không thể kích hoạt micro. Vui lòng cấp quyền truy cập micro trên trình duyệt.');
+      try {
+        const started = voiceServiceRef.current?.start();
+        if (started) {
+          setIsRecording(true);
+          playSound('click');
+        } else {
+          setSpeechError('Không thể kích hoạt micro. Bạn có thể bấm nút "AI Đọc & Chấm Mẫu Nhanh" bên dưới để tiếp tục.');
+          setIsRecording(false);
+        }
+      } catch (e: any) {
+        setSpeechError('Lỗi mở micro: ' + (e?.message || 'Vui lòng kiểm tra quyền truy cập micro'));
+        setIsRecording(false);
       }
     }
   };
@@ -215,10 +261,7 @@ export const ExamSimulator: React.FC = () => {
 
   const submitTest = () => {
     handleStopAudio();
-    if (isRecording) {
-      voiceServiceRef.current?.stop();
-      setIsRecording(false);
-    }
+    handleForceStopRecording();
     setIsTestSubmitted(true);
     setIsTestStarted(false);
     playSound('complete');
@@ -232,14 +275,15 @@ export const ExamSimulator: React.FC = () => {
   let readingTotal = 0;
 
   if (!isSWExam) {
-    lrQuestions.forEach((q, idx) => {
-      if (q.skill === 'listening') listeningTotal++;
-      if (q.skill === 'reading') readingTotal++;
+    (testQuestions as (ListeningQuestion | ReadingQuestion)[]).forEach((q, idx) => {
+      const isListening = q.part <= 4;
+      if (isListening) listeningTotal++;
+      else readingTotal++;
 
       if (userAnswers[idx] === q.correctAnswer) {
         correctCount++;
-        if (q.skill === 'listening') listeningCorrect++;
-        if (q.skill === 'reading') readingCorrect++;
+        if (isListening) listeningCorrect++;
+        else readingCorrect++;
       }
     });
   }
@@ -301,6 +345,36 @@ export const ExamSimulator: React.FC = () => {
             </p>
           </div>
 
+          {/* Quick Comparison Bar */}
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-2 mb-2">
+              <Award className="w-4 h-4 text-[#801732] dark:text-rose-400" />
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                So Sánh 3 Bộ Đề Thi Khác Biệt Hoàn Toàn Về Cấu Trúc & Kỹ Năng:
+              </h3>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span className="font-extrabold text-amber-700 dark:text-amber-300 block mb-0.5">1. Mini Test (20 Phút)</span>
+                <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
+                  16 câu trắc nghiệm bao quát đủ 7 Part. Dành cho kiểm tra chẩn đoán nhanh năng lực Nghe & Đọc.
+                </p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span className="font-extrabold text-brand-700 dark:text-brand-300 block mb-0.5">2. Đề Nâng Cao (45 Phút)</span>
+                <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
+                  30 câu thực chiến chuyên sâu với câu hỏi bẫy khó Target 800+, bài đọc kép Double Passage và audio 3 người.
+                </p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <span className="font-extrabold text-purple-700 dark:text-purple-300 block mb-0.5">3. Đề Nói & Viết (80 Phút)</span>
+                <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
+                  19 câu hoàn toàn khác biệt: Thu âm giọng nói Speaking (Q1-11) + Soạn email & viết luận Writing (Q12-19).
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Exam Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {MOCK_EXAM_LIST.map((exam) => {
@@ -322,9 +396,11 @@ export const ExamSimulator: React.FC = () => {
                       <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
                         isSW
                           ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200'
+                          : exam.id === 'mock-lr-full-01'
+                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200'
                           : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200'
                       }`}>
-                        {isSW ? 'Speaking & Writing' : exam.targetBand}
+                        {exam.formatBadge || exam.targetBand}
                       </span>
                       <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
                         <Clock className="w-3.5 h-3.5" />
@@ -339,17 +415,53 @@ export const ExamSimulator: React.FC = () => {
                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
                       {exam.descriptionVi}
                     </p>
+
+                    {/* Features list */}
+                    {exam.features && (
+                      <div className="space-y-1 mb-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        {exam.features.map((feat, fidx) => (
+                          <div key={fidx} className="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-300 font-medium">
+                            <CheckCheck className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                            <span>{feat}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-bold">
-                    <span className="text-slate-500">{exam.totalQuestions} câu hỏi</span>
+                    <span className="text-slate-500">{exam.totalQuestions} câu hỏi • {exam.skillsFocus}</span>
                     <span className={isSelected ? 'text-[#801732] dark:text-rose-400' : 'text-slate-400'}>
-                      {isSelected ? 'Đang chọn' : 'Bấm để chọn'}
+                      {isSelected ? 'Đang chọn ✓' : 'Bấm để chọn'}
                     </span>
                   </div>
                 </div>
               );
             })}
+          </div>
+
+          {/* Selected Exam Structure Details */}
+          <div className="p-4 rounded-2xl bg-amber-50/70 dark:bg-slate-800/80 border border-amber-200 dark:border-slate-700">
+            <span className="text-[11px] font-black uppercase tracking-wider text-amber-900 dark:text-amber-300 block mb-1">
+              📌 Cấu Trúc Đề Thi Đang Chọn ({currentExam.name}):
+            </span>
+            <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed space-y-1">
+              {currentExam.id === 'mock-lr-mini-01' && (
+                <p>
+                  • <strong>16 câu trắc nghiệm chẩn đoán</strong> bao gồm: Part 1 Ảnh văn phòng & kho hàng (2 câu), Part 2 Hỏi đáp When/Or/Gián tiếp (3 câu), Part 3 Hội thoại đặt phòng (1 câu), Part 4 Thông báo phần mềm (1 câu), Part 5 Ngữ pháp từ loại & liên từ (4 câu), Part 6 Thông báo memo (1 câu), Part 7 Email, Hóa đơn & Lịch trình (4 câu).
+                </p>
+              )}
+              {currentExam.id === 'mock-lr-full-01' && (
+                <p>
+                  • <strong>30 câu chuyên sâu nâng cao</strong> bao gồm: Toàn bộ 16 câu nền tảng + 14 câu bẫy khó Target 800+ (Part 1 Họp hội đồng & Café ngoài trời, Part 2 Bẫy phủ định & lùi hạn ngân sách, Part 3 Chuỗi cung ứng chip, Part 4 Sân bay quốc tế & Hợp đồng thuê nhà, Part 5 Đảo ngữ Should & Collocation biosafety, Part 6 Sáp nhập Crestview, Part 7 Bài đọc kép Double Passage hợp đồng & báo giá IT CloudCore).
+                </p>
+              )}
+              {currentExam.id === 'mock-sw-full-01' && (
+                <p>
+                  • <strong>19 câu Nói & Viết thực chiến</strong> bao gồm: 11 câu Speaking (Đọc to văn bản thông báo, Miêu tả ảnh tại văn phòng & xưởng sản xuất, Trả lời phỏng vấn theo chủ đề, Bày tỏ quan điểm) + 8 câu Writing (Viết câu hoàn chỉnh dựa trên tranh ảnh, Phản hồi email khách hàng, Viết bài luận quan điểm 300 từ).
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Start Test CTA */}
@@ -390,18 +502,18 @@ export const ExamSimulator: React.FC = () => {
               </span>
               <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-md ${
                 isSWExam
-                  ? currentQuestion.skill === 'speaking'
+                  ? (currentQuestion as SWExamQuestion).skill === 'speaking'
                     ? 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300'
                     : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
-                  : currentQuestion.skill === 'listening'
+                  : ('part' in currentQuestion && currentQuestion.part <= 4)
                   ? 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
                   : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
               }`}>
                 {isSWExam
-                  ? currentQuestion.skill === 'speaking'
+                  ? (currentQuestion as SWExamQuestion).skill === 'speaking'
                     ? `Phần Nói (Speaking Q${(currentQuestion as SWExamQuestion).questionNumber})`
                     : `Phần Viết (Writing Q${(currentQuestion as SWExamQuestion).questionNumber - 11})`
-                  : currentQuestion.skill === 'listening'
+                  : ('part' in currentQuestion && currentQuestion.part <= 4)
                   ? 'Phần Nghe (Listening)'
                   : 'Phần Đọc (Reading)'}
               </span>
@@ -454,6 +566,7 @@ export const ExamSimulator: React.FC = () => {
                     type={(currentQuestion as SWExamQuestion).imageType!} 
                     title={(currentQuestion as SWExamQuestion).title}
                     altCaption={(currentQuestion as SWExamQuestion).contextVi || 'ETS Official Test Photograph'}
+                    showCaption={isTestSubmitted}
                   />
                 </div>
               )}
@@ -498,7 +611,7 @@ export const ExamSimulator: React.FC = () => {
                   </div>
 
                   {/* Microphone Action Button */}
-                  <div className="text-center py-4">
+                  <div className="text-center py-3">
                     <button
                       onClick={toggleRecording}
                       className={`w-20 h-20 rounded-full flex items-center justify-center text-white mx-auto transition-all shadow-xl active:scale-95 ${
@@ -514,8 +627,52 @@ export const ExamSimulator: React.FC = () => {
                     <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-3">
                       {isRecording ? '🔴 Đang lắng nghe... Hãy đọc to câu trả lời của bạn' : 'Bấm vào micro để bắt đầu thu âm phát âm'}
                     </p>
+
+                    {/* Explicit Control Buttons when recording or stuck */}
+                    {isRecording ? (
+                      <div className="flex items-center justify-center gap-2.5 mt-3 flex-wrap">
+                        <button
+                          onClick={handleForceStopRecording}
+                          className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold shadow-md active:scale-95 flex items-center gap-1.5"
+                        >
+                          <StopCircle className="w-4 h-4" />
+                          <span>⏹ Dừng Thu & Chấm Điểm</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleForceStopRecording();
+                            setLiveTranscript('');
+                            setSpeakingEvaluation(null);
+                          }}
+                          className="px-3.5 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 text-xs font-bold active:scale-95"
+                        >
+                          <span>Hủy</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
+                        <button
+                          onClick={handleSimulateAnswer}
+                          className="px-3.5 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-xs font-extrabold flex items-center gap-1.5 active:scale-95 transition-all shadow-xs"
+                          title="Tự động điền bài nói mẫu chuẩn bản xứ và chấm điểm AI nhanh nếu không tiện dùng mic trên Safari"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                          <span>AI Đọc & Chấm Mẫu Nhanh (Không cần mic)</span>
+                        </button>
+                      </div>
+                    )}
+
                     {speechError && (
-                      <p className="text-xs text-rose-500 font-semibold mt-1">{speechError}</p>
+                      <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-xs text-rose-600 dark:text-rose-400 font-semibold mt-3 max-w-md mx-auto text-center space-y-1.5">
+                        <p>{speechError}</p>
+                        <button
+                          onClick={handleSimulateAnswer}
+                          className="px-3 py-1.5 rounded-lg bg-rose-600 text-white font-extrabold text-xs inline-flex items-center gap-1 active:scale-95 shadow-sm"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Dùng Câu Trả Lời Mẫu ETS & Đi Tiếp ➔</span>
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -696,7 +853,7 @@ export const ExamSimulator: React.FC = () => {
           {!isSWExam && (
             <div>
               {/* DEDICATED HIGH-VISIBILITY AUDIO PLAYER FOR LISTENING QUESTIONS */}
-              {currentQuestion.skill === 'listening' && 'audioPrompt' in currentQuestion && currentQuestion.audioPrompt && (
+              {'part' in currentQuestion && currentQuestion.part <= 4 && 'audioPrompt' in currentQuestion && currentQuestion.audioPrompt && (
                 <div className="mb-6 p-5 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-slate-50 dark:from-slate-800 dark:via-blue-950/40 dark:to-slate-900 border-2 border-blue-300 dark:border-blue-800 shadow-md">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     
@@ -800,12 +957,13 @@ export const ExamSimulator: React.FC = () => {
               )}
 
               {/* Part 1 Photo Card (Visual Test Photo) */}
-              {currentQuestion.skill === 'listening' && 'part' in currentQuestion && currentQuestion.part === 1 && (
+              {'part' in currentQuestion && currentQuestion.part === 1 && (
                 <div className="mb-6">
                   <TOEICPictureCard 
                     type={(currentQuestion as ListeningQuestion).imageType || (currentQuestion.id === 'l-p1-02' ? 'warehouse-loading' : 'office-typing')} 
                     title="Part 1: ETS Official Test Photograph"
                     altCaption={(currentQuestion as ListeningQuestion).scenario || 'Look at the photo and listen to the statements.'}
+                    showCaption={isTestSubmitted}
                   />
                 </div>
               )}

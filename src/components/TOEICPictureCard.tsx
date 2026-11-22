@@ -17,6 +17,7 @@ interface TOEICPictureCardProps {
   altCaption?: string;
   title?: string;
   className?: string;
+  showCaption?: boolean; // When false, hides the answer description to avoid spoiling the question
 }
 
 export const TOEICPictureCard: React.FC<TOEICPictureCardProps> = ({
@@ -24,6 +25,7 @@ export const TOEICPictureCard: React.FC<TOEICPictureCardProps> = ({
   altCaption = 'ETS TOEIC Official Photograph',
   title = 'ETS TOEIC Test Photograph',
   className = '',
+  showCaption = false,
 }) => {
   return (
     <div className={`relative overflow-hidden rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-md ${className}`}>
@@ -393,9 +395,16 @@ export const TOEICPictureCard: React.FC<TOEICPictureCardProps> = ({
 
       {/* Caption & Instructions Bar */}
       <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
-        <span className="font-semibold italic">
-          "{altCaption}"
-        </span>
+        {showCaption && altCaption ? (
+          <span className="font-semibold italic text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>Mô tả ảnh: "{altCaption}"</span>
+          </span>
+        ) : (
+          <span className="font-medium text-slate-500 dark:text-slate-400">
+            🎧 Quan sát ảnh và nghe 4 phương án A, B, C, D để chọn câu mô tả đúng nhất
+          </span>
+        )}
         <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
           Format ảnh chuẩn bài thi ETS TOEIC
         </span>

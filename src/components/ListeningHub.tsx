@@ -333,6 +333,7 @@ export const ListeningHub: React.FC<ListeningHubProps> = ({
               type={currentQuestion.imageType || (currentQuestion.id === 'l-p1-02' ? 'warehouse-loading' : 'office-typing')} 
               title="Part 1: ETS Official Test Photograph"
               altCaption={currentQuestion.scenario || 'Look at the photo and listen to the four statements.'}
+              showCaption={selectedAnswer !== null}
             />
           </div>
         )}

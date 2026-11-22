@@ -156,6 +156,8 @@ export class VoiceRecognitionService {
   private sessionFinalTranscript: string = '';
   private currentPassFinalTranscript: string = '';
   private restartTimeout: any = null;
+  private maxDurationTimer: any = null;
+  private isMobileOrSafari: boolean = false;
 
   constructor(
     private onResult: (result: SpeechResult) => void,
@@ -163,109 +165,129 @@ export class VoiceRecognitionService {
     private onEnd: () => void
   ) {
     if (typeof window !== 'undefined') {
+      this.isMobileOrSafari = typeof navigator !== 'undefined' && (
+        /iPad|iPhone|iPod/.test(navigator.userAgent || '') ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+        /^((?!chrome|android).)*safari/i.test(navigator.userAgent || '')
+      );
+
       const SpeechRecognitionClass =
         (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognitionClass) {
-        this.recognition = new SpeechRecognitionClass();
-        this.recognition.continuous = true;
-        this.recognition.interimResults = true;
-        this.recognition.lang = 'en-US';
+        try {
+          this.recognition = new SpeechRecognitionClass();
+          // iOS Safari breaks or crashes if continuous is true
+          this.recognition.continuous = !this.isMobileOrSafari;
+          this.recognition.interimResults = true;
+          this.recognition.lang = 'en-US';
 
-        this.recognition.onresult = (event: any) => {
-          let currentPassFinal = '';
-          let interimTranscript = '';
-          let confidence = 0.95;
+          this.recognition.onresult = (event: any) => {
+            let currentPassFinal = '';
+            let interimTranscript = '';
+            let confidence = 0.95;
 
-          // Always loop from 0 to preserve all chunks recognized in current recognition pass
-          for (let i = 0; i < event.results.length; ++i) {
-            const res = event.results[i];
-            if (res.isFinal) {
-              currentPassFinal += res[0].transcript + ' ';
-              confidence = res[0].confidence || 0.95;
-            } else {
-              interimTranscript += res[0].transcript;
+            for (let i = 0; i < event.results.length; ++i) {
+              const res = event.results[i];
+              if (res.isFinal) {
+                currentPassFinal += res[0].transcript + ' ';
+                confidence = res[0].confidence || 0.95;
+              } else {
+                interimTranscript += res[0].transcript;
+              }
             }
-          }
 
-          this.currentPassFinalTranscript = currentPassFinal.trim();
+            this.currentPassFinalTranscript = currentPassFinal.trim();
 
-          // Full accumulated text: prior passes + current pass final + current interim
-          const fullAccumulated = [
-            this.sessionFinalTranscript,
-            this.currentPassFinalTranscript,
-            interimTranscript.trim()
-          ]
-            .filter(Boolean)
-            .join(' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-
-          this.onResult({
-            transcript: fullAccumulated,
-            confidence,
-            isFinal: false,
-          });
-        };
-
-        this.recognition.onerror = (event: any) => {
-          // 'no-speech' or 'aborted' happens naturally when user takes a breath or pauses to think.
-          // NEVER kill the recording session on natural speech pauses!
-          if (event.error === 'no-speech' || event.error === 'aborted') {
-            return;
-          }
-
-          // Fatal errors only
-          this.shouldBeListening = false;
-          this.isListening = false;
-          const msg =
-            event.error === 'not-allowed'
-              ? 'Quyền truy cập Microphone bị từ chối. Vui lòng cấp quyền micro trong trình duyệt.'
-              : event.error === 'audio-capture'
-              ? 'Không tìm thấy thiết bị Microphone trên thiết bị.'
-              : `Lỗi nhận diện giọng nói: ${event.error}`;
-          this.onError(msg);
-        };
-
-        this.recognition.onend = () => {
-          this.isListening = false;
-
-          // Commit current pass final text into permanent session transcript
-          if (this.currentPassFinalTranscript) {
-            this.sessionFinalTranscript = [
+            const fullAccumulated = [
               this.sessionFinalTranscript,
-              this.currentPassFinalTranscript
+              this.currentPassFinalTranscript,
+              interimTranscript.trim()
             ]
               .filter(Boolean)
               .join(' ')
               .replace(/\s+/g, ' ')
               .trim();
-            this.currentPassFinalTranscript = '';
-          }
 
-          // If the user hasn't explicitly stopped, automatically restart to allow continuous reading across pauses
-          if (this.shouldBeListening) {
-            if (this.restartTimeout) clearTimeout(this.restartTimeout);
-            this.restartTimeout = setTimeout(() => {
-              if (this.shouldBeListening) {
-                try {
-                  this.recognition.start();
-                  this.isListening = true;
-                } catch {
-                  // Ignore state race condition
-                }
+            this.onResult({
+              transcript: fullAccumulated,
+              confidence,
+              isFinal: false,
+            });
+          };
+
+          this.recognition.onerror = (event: any) => {
+            // 'no-speech' or 'aborted' happens naturally when user takes a breath
+            if (event.error === 'no-speech') {
+              if (this.isMobileOrSafari) {
+                this.stop();
               }
-            }, 100);
-          } else {
+              return;
+            }
+            if (event.error === 'aborted') {
+              this.isListening = false;
+              this.shouldBeListening = false;
+              this.onEnd();
+              return;
+            }
+
+            // Fatal errors
+            this.shouldBeListening = false;
+            this.isListening = false;
+            const msg =
+              event.error === 'not-allowed'
+                ? 'Quyền truy cập Microphone bị từ chối. Vui lòng kiểm tra quyền micro trong Cài đặt Safari/iOS.'
+                : event.error === 'audio-capture'
+                ? 'Không tìm thấy thiết bị Microphone trên thiết bị.'
+                : `Lỗi nhận diện giọng nói: ${event.error}`;
+            this.onError(msg);
             this.onEnd();
-          }
-        };
+          };
+
+          this.recognition.onend = () => {
+            this.isListening = false;
+
+            if (this.currentPassFinalTranscript) {
+              this.sessionFinalTranscript = [
+                this.sessionFinalTranscript,
+                this.currentPassFinalTranscript
+              ]
+                .filter(Boolean)
+                .join(' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+              this.currentPassFinalTranscript = '';
+            }
+
+            // On iOS/Safari, avoid automated restart loops which get blocked by user-gesture security
+            if (this.shouldBeListening && !this.isMobileOrSafari) {
+              if (this.restartTimeout) clearTimeout(this.restartTimeout);
+              this.restartTimeout = setTimeout(() => {
+                if (this.shouldBeListening) {
+                  try {
+                    this.recognition?.start();
+                    this.isListening = true;
+                  } catch {
+                    this.isListening = false;
+                    this.shouldBeListening = false;
+                    this.onEnd();
+                  }
+                }
+              }, 150);
+            } else {
+              this.shouldBeListening = false;
+              this.onEnd();
+            }
+          };
+        } catch (e: any) {
+          console.warn('SpeechRecognition initialization error:', e);
+        }
       }
     }
   }
 
   public start(): boolean {
     if (!this.recognition) {
-      this.onError('Trình duyệt chưa hỗ trợ Web Speech Recognition. Khuyến nghị dùng Google Chrome hoặc Microsoft Edge.');
+      this.onError('Trình duyệt chưa hỗ trợ Web Speech Recognition hoặc đang bị chặn quyền.');
       return false;
     }
 
@@ -273,10 +295,21 @@ export class VoiceRecognitionService {
       clearTimeout(this.restartTimeout);
       this.restartTimeout = null;
     }
+    if (this.maxDurationTimer) {
+      clearTimeout(this.maxDurationTimer);
+      this.maxDurationTimer = null;
+    }
 
     this.shouldBeListening = true;
     this.sessionFinalTranscript = '';
     this.currentPassFinalTranscript = '';
+
+    // Safety watchdog: Max 45 seconds per speaking attempt
+    this.maxDurationTimer = setTimeout(() => {
+      if (this.isListening) {
+        this.stop();
+      }
+    }, 45000);
 
     if (this.isListening) return true;
 
@@ -284,7 +317,14 @@ export class VoiceRecognitionService {
       this.recognition.start();
       this.isListening = true;
       return true;
-    } catch {
+    } catch (err: any) {
+      if (err?.name === 'InvalidStateError') {
+        this.isListening = true;
+        return true;
+      }
+      this.isListening = false;
+      this.shouldBeListening = false;
+      this.onError('Không thể mở micro: ' + (err?.message || 'Vui lòng kiểm tra quyền truy cập'));
       return false;
     }
   }
@@ -295,8 +335,11 @@ export class VoiceRecognitionService {
       clearTimeout(this.restartTimeout);
       this.restartTimeout = null;
     }
+    if (this.maxDurationTimer) {
+      clearTimeout(this.maxDurationTimer);
+      this.maxDurationTimer = null;
+    }
 
-    // Commit any lingering final text
     if (this.currentPassFinalTranscript) {
       this.sessionFinalTranscript = [
         this.sessionFinalTranscript,
@@ -309,14 +352,16 @@ export class VoiceRecognitionService {
       this.currentPassFinalTranscript = '';
     }
 
-    if (this.recognition && this.isListening) {
+    if (this.recognition) {
       try {
         this.recognition.stop();
+      } catch {}
+      try {
+        this.recognition.abort();
       } catch {}
     }
     this.isListening = false;
 
-    // Send final completed result
     this.onResult({
       transcript: this.sessionFinalTranscript.trim(),
       confidence: 0.95,

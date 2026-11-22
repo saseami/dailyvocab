@@ -110,10 +110,15 @@ export const SpeakingLab: React.FC<SpeakingLabProps> = ({
   };
 
   const stopRecording = () => {
-    if (voiceServiceRef.current) {
-      voiceServiceRef.current.stop();
+    try {
+      if (voiceServiceRef.current) {
+        voiceServiceRef.current.stop();
+      }
+    } catch (e) {
+      console.warn('Error stopping voice service in SpeakingLab:', e);
+    } finally {
+      setIsRecording(false);
     }
-    setIsRecording(false);
     playSound('click');
 
     // Finalize evaluation with isLive = false (marks remaining words as incorrect)
@@ -127,6 +132,22 @@ export const SpeakingLab: React.FC<SpeakingLabProps> = ({
         playSound('wrong');
       }
     }
+  };
+
+  const handleSimulateSpeaking = () => {
+    try {
+      if (voiceServiceRef.current) {
+        voiceServiceRef.current.stop();
+      }
+    } catch {}
+    setIsRecording(false);
+
+    const targetSentence = targetTextRef.current;
+    setTranscript(targetSentence);
+    const finalEval = calculatePronunciationScore(targetSentence, targetSentence, false);
+    setEvaluation(finalEval);
+    playSound('correct');
+    onCompleteTask(95);
   };
 
   const toggleRecording = () => {
@@ -575,10 +596,34 @@ export const SpeakingLab: React.FC<SpeakingLabProps> = ({
               : 'Bấm vào micro để bắt đầu đọc phát âm'}
           </p>
 
+          {/* Fast Simulation / Safari Fallback */}
+          {!isRecording && (
+            <div className="mt-3 flex items-center justify-center">
+              <button
+                type="button"
+                onClick={handleSimulateSpeaking}
+                className="px-3.5 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-[#801732] dark:text-rose-300 hover:bg-rose-100 text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all shadow-2xs"
+                title="Dành cho người học ở nơi công cộng hoặc Safari không tiện mở mic"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>AI Đọc &amp; Chấm Mẫu Nhanh (Không cần mic)</span>
+              </button>
+            </div>
+          )}
+
           {errorMessage && (
-            <div className="mt-3 flex items-center gap-1.5 text-xs text-rose-500 font-semibold">
-              <AlertCircle className="w-4 h-4" />
-              <span>{errorMessage}</span>
+            <div className="mt-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-center space-y-1.5">
+              <div className="flex items-center justify-center gap-1.5 text-xs text-rose-500 font-semibold">
+                <AlertCircle className="w-4 h-4" />
+                <span>{errorMessage}</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleSimulateSpeaking}
+                className="text-xs text-[#801732] dark:text-rose-300 font-bold underline"
+              >
+                👉 Bấm vào đây để AI dùng câu mẫu chấm điểm và đi tiếp
+              </button>
             </div>
           )}
         </div>
