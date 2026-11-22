@@ -13,6 +13,10 @@ import { MobileNotebookTab } from './components/MobileNotebookTab';
 import { MobileProfileTab } from './components/MobileProfileTab';
 import { ProfileSwitcherModal } from './components/ProfileSwitcherModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import { ErrorVaultModal } from './components/ErrorVaultModal';
+import { SurvivalSpeedMatchModal } from './components/SurvivalSpeedMatchModal';
+import { BadgesModal } from './components/BadgesModal';
+import { getErrorVault } from './utils/errorVault';
 import { TOEICPhase } from './data/toeicSkillData';
 import { playSound } from './utils/audio';
 import { Target, Trophy, Sparkles, Award, ShieldCheck, BookOpen } from 'lucide-react';
@@ -44,7 +48,23 @@ export const App: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isErrorVaultOpen, setIsErrorVaultOpen] = useState(false);
+  const [isSpeedMatchOpen, setIsSpeedMatchOpen] = useState(false);
+  const [isBadgesOpen, setIsBadgesOpen] = useState(false);
+  const [errorVaultCount, setErrorVaultCount] = useState<number>(() => getErrorVault().length);
   const [mobileTab, setMobileTab] = useState<MobileTab>('study');
+
+  useEffect(() => {
+    const updateVaultCount = () => {
+      setErrorVaultCount(getErrorVault().length);
+    };
+    window.addEventListener('storage', updateVaultCount);
+    window.addEventListener('error-vault-updated', updateVaultCount);
+    return () => {
+      window.removeEventListener('storage', updateVaultCount);
+      window.removeEventListener('error-vault-updated', updateVaultCount);
+    };
+  }, []);
 
   // 3-Phase Study Progression State
   const [currentPhase, setCurrentPhase] = useState<TOEICPhase>(() => {
@@ -147,6 +167,10 @@ export const App: React.FC = () => {
         theme={theme}
         onThemeChange={setTheme}
         onOpenAddWord={() => setIsAddModalOpen(true)}
+        errorVaultCount={errorVaultCount}
+        onOpenErrorVault={() => setIsErrorVaultOpen(true)}
+        onOpenSpeedMatch={() => setIsSpeedMatchOpen(true)}
+        onOpenBadges={() => setIsBadgesOpen(true)}
         onOpenStats={() => {
           if (window.innerWidth < 768) {
             setMobileTab('profile');
@@ -282,6 +306,10 @@ export const App: React.FC = () => {
               onImportProgress={importProgress}
               activeProfile={activeProfile}
               onOpenProfileSwitcher={() => setIsProfileModalOpen(true)}
+              errorVaultCount={errorVaultCount}
+              onOpenErrorVault={() => setIsErrorVaultOpen(true)}
+              onOpenSpeedMatch={() => setIsSpeedMatchOpen(true)}
+              onOpenBadges={() => setIsBadgesOpen(true)}
             />
           )}
         </div>
@@ -329,6 +357,28 @@ export const App: React.FC = () => {
       <TextSelectionLearner
         onSaveCustomWord={addCustomWord}
         onOpenPersonalTopic={handleOpenPersonalNotebook}
+      />
+
+      {/* Sổ Tay Bẫy & Câu Sai Thông Minh (AI Error Vault) */}
+      <ErrorVaultModal
+        isOpen={isErrorVaultOpen}
+        onClose={() => {
+          setIsErrorVaultOpen(false);
+          setErrorVaultCount(getErrorVault().length);
+        }}
+      />
+
+      {/* Mini-Game Sinh Tồn 60 Giây (Survival Speed Match) */}
+      <SurvivalSpeedMatchModal
+        isOpen={isSpeedMatchOpen}
+        onClose={() => setIsSpeedMatchOpen(false)}
+        allWords={allWords}
+      />
+
+      {/* Bảng Huy Hiệu Vinh Danh ETS (Achievements) */}
+      <BadgesModal
+        isOpen={isBadgesOpen}
+        onClose={() => setIsBadgesOpen(false)}
       />
     </div>
   );

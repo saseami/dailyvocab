@@ -3,6 +3,7 @@ import { TOEIC_READING_QUESTIONS, ReadingQuestion, TOEICPhase } from '../data/to
 import { Topic, Word } from '../types';
 import { generateTopicReadingQuestions } from '../utils/topicSkillGenerator';
 import { saveTopicSkillCompleted } from '../utils/topicProgress';
+import { saveWrongQuestion } from '../utils/errorVault';
 import { 
   BookOpen, CheckCircle2, AlertTriangle, ArrowRight, RotateCcw, 
   Lightbulb, Link2, Clock, Sparkles, Layers, Target, Zap, Globe, FileText 
@@ -85,6 +86,21 @@ export const ReadingHub: React.FC<ReadingHubProps> = ({
       playSound('correct');
     } else {
       playSound('wrong');
+      // Save wrong question to Error Vault
+      saveWrongQuestion({
+        source: 'reading',
+        part: currentQuestion.part,
+        topicId: topic?.id || 'general',
+        topicTitle: topic ? (topic.titleVi || topic.title) : 'Reading Practice',
+        questionText: currentQuestion.questionText,
+        passage: currentQuestion.passage,
+        options: currentQuestion.options.map(o => ({ key: o.key, text: o.text })),
+        userAnswer: key,
+        correctAnswer: currentQuestion.correctAnswer,
+        explanationVi: currentQuestion.explanationVi,
+        grammarRuleVi: currentQuestion.grammarRuleVi,
+        trapType: currentQuestion.trapType,
+      });
     }
 
     // Save reading skill completion for this topic

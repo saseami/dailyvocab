@@ -1,15 +1,16 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useState, useEffect } from 'react';
 import { UserProgress, UserProfile } from '../types';
 import { 
   User, Flame, Trophy, Award, Moon, Sun, Download, Upload, 
   RotateCcw, Sparkles, Smartphone, CheckCircle2, ShieldCheck, 
   BookOpen, Heart, ArrowUpRight, BarChart3, HelpCircle, AlertCircle,
-  Headphones, Layers, Mic, CheckCircle, ChevronRight, Users
+  Headphones, Layers, Mic, CheckCircle, ChevronRight, Users, ShieldAlert, Zap
 } from 'lucide-react';
 import { playSound } from '../utils/audio';
 import { getTopicSkillsProgressMap } from '../utils/topicProgress';
 import { RadarSkillsChart } from './RadarSkillsChart';
 import { TOEICScorePredictor } from './TOEICScorePredictor';
+import { TOEICAccent, ETS_ACCENTS, getPreferredAccent, setPreferredAccent } from '../utils/audioAccents';
 
 interface MobileProfileTabProps {
   progress: UserProgress;
@@ -19,6 +20,10 @@ interface MobileProfileTabProps {
   onImportProgress: (data: UserProgress) => void;
   activeProfile?: UserProfile;
   onOpenProfileSwitcher?: () => void;
+  errorVaultCount?: number;
+  onOpenErrorVault?: () => void;
+  onOpenSpeedMatch?: () => void;
+  onOpenBadges?: () => void;
 }
 
 export const MobileProfileTab: React.FC<MobileProfileTabProps> = ({
@@ -29,8 +34,23 @@ export const MobileProfileTab: React.FC<MobileProfileTabProps> = ({
   onImportProgress,
   activeProfile,
   onOpenProfileSwitcher,
+  errorVaultCount = 0,
+  onOpenErrorVault,
+  onOpenSpeedMatch,
+  onOpenBadges,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [userAccent, setUserAccent] = useState<TOEICAccent>(() => getPreferredAccent());
+
+  useEffect(() => {
+    const handleAccent = (e: any) => {
+      if (e.detail?.accent) setUserAccent(e.detail.accent);
+    };
+    window.addEventListener('accent-changed', handleAccent);
+    return () => window.removeEventListener('accent-changed', handleAccent);
+  }, []);
+
+  const selectedAccentDesc = ETS_ACCENTS.find(a => a.id === userAccent)?.label || 'Ngẫu nhiên ETS';
 
   const learnedCount = progress.learnedWords.length;
   const masteredCount = progress.masteredWords.length;
@@ -416,6 +436,138 @@ export const MobileProfileTab: React.FC<MobileProfileTabProps> = ({
             {masteredCount}
           </div>
           <span className="text-[10px] font-semibold text-slate-400 block">Thuộc lòng SRS</span>
+        </div>
+      </div>
+
+      {/* KHỐI TIỆN ÍCH ĐỘT PHÁ ETS & LUYỆN ĐỀ */}
+      <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
+              Công Cụ Đột Phá &amp; Rèn Luyện ETS
+            </h3>
+          </div>
+          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-brand-50 dark:bg-brand-950 text-brand-700 dark:text-brand-300">
+            Mới 2026
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {/* Card 1: Sổ Tay Bẫy & Câu Sai */}
+          <button
+            onClick={() => {
+              onOpenErrorVault?.();
+              playSound('click');
+            }}
+            className="p-3 rounded-2xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/20 text-left transition-all hover:border-rose-400 active:scale-98 flex items-center justify-between"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center flex-shrink-0 font-bold shadow-xs">
+                <ShieldAlert className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-black text-slate-900 dark:text-white truncate">
+                  Sổ Tay Bẫy &amp; Câu Sai
+                </div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                  Chế độ Phục Thù thông minh
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-rose-600 text-white shadow-xs">
+                {errorVaultCount} câu
+              </span>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            </div>
+          </button>
+
+          {/* Card 2: Sinh Tồn 60 Giây */}
+          <button
+            onClick={() => {
+              onOpenSpeedMatch?.();
+              playSound('click');
+            }}
+            className="p-3 rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/20 text-left transition-all hover:border-amber-400 active:scale-98 flex items-center justify-between"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0 font-bold shadow-xs">
+                <Zap className="w-4 h-4 fill-white" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-black text-slate-900 dark:text-white truncate">
+                  Sinh Tồn 60 Giây
+                </div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                  Phản xạ nối từ cấp tốc • Combo x3
+                </div>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+          </button>
+
+          {/* Card 3: Huy Hiệu ETS */}
+          <button
+            onClick={() => {
+              onOpenBadges?.();
+              playSound('click');
+            }}
+            className="p-3 rounded-2xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/50 dark:bg-indigo-950/20 text-left transition-all hover:border-indigo-400 active:scale-98 flex items-center justify-between"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 font-bold shadow-xs">
+                <Award className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-black text-slate-900 dark:text-white truncate">
+                  Bộ Sưu Tập Huy Hiệu
+                </div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                  8 Danh hiệu chinh phục ETS 990
+                </div>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+          </button>
+
+          {/* Card 4: Giọng Đọc ETS Yêu Thích */}
+          <div className="p-3 rounded-2xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/20 flex flex-col justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0 font-bold shadow-xs">
+                <Headphones className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-xs font-black text-slate-900 dark:text-white">
+                  Giọng Đọc ETS Bản Ngữ
+                </div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                  {selectedAccentDesc}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-none">
+              {ETS_ACCENTS.map(acc => (
+                <button
+                  key={acc.id}
+                  onClick={() => {
+                    setPreferredAccent(acc.id);
+                    setUserAccent(acc.id);
+                    playSound('click');
+                  }}
+                  className={`px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 flex-shrink-0 ${
+                    userAccent === acc.id
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                  }`}
+                >
+                  <span>{acc.flag}</span>
+                  <span className="text-[10px]">{acc.id}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 

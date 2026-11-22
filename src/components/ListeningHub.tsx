@@ -3,11 +3,16 @@ import { TOEIC_LISTENING_QUESTIONS, ListeningQuestion, TOEICPhase } from '../dat
 import { Topic, Word } from '../types';
 import { generateTopicListeningQuestions } from '../utils/topicSkillGenerator';
 import { saveTopicSkillCompleted } from '../utils/topicProgress';
+import { saveWrongQuestion } from '../utils/errorVault';
+import { 
+  TOEICAccent, ETS_ACCENTS, getPreferredAccent, 
+  setPreferredAccent, speakWithETSAccent 
+} from '../utils/audioAccents';
 import { 
   Headphones, Volume2, CheckCircle2, AlertTriangle, Eye, EyeOff, Sparkles, 
   HelpCircle, ArrowRight, RotateCcw, Lightbulb, Compass, Zap, Target, Pause, Info, Award, Globe
 } from 'lucide-react';
-import { speakWord, stopSpeaking, playSound } from '../utils/audio';
+import { playSound, stopSpeaking } from '../utils/audio';
 import { TOEICPictureCard } from './TOEICPictureCard';
 
 interface ListeningHubProps {
@@ -57,6 +62,17 @@ export const ListeningHub: React.FC<ListeningHubProps> = ({
   const [showTranscript, setShowTranscript] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [currentAccent, setCurrentAccent] = useState<TOEICAccent>(() => getPreferredAccent());
+
+  useEffect(() => {
+    const handleAccentChange = (e: any) => {
+      if (e.detail?.accent) {
+        setCurrentAccent(e.detail.accent);
+      }
+    };
+    window.addEventListener('accent-changed', handleAccentChange);
+    return () => window.removeEventListener('accent-changed', handleAccentChange);
+  }, []);
 
   // Sync selectedPart with currentPhase on change
   useEffect(() => {
@@ -89,16 +105,12 @@ export const ListeningHub: React.FC<ListeningHubProps> = ({
 
   const currentQuestion = questions[currentIndex] || questions[0];
 
-  const handlePlayAudio = (speed: number = playbackSpeed) => {
+  const handlePlayAudio = (speed: number = playbackSpeed, accent: TOEICAccent = currentAccent) => {
     if (!currentQuestion?.audioPrompt) return;
     setPlaybackSpeed(speed);
     setIsPlayingAudio(true);
-    speakWord(currentQuestion.audioPrompt, {
-      rate: speed,
-      lang: 'en-US',
-      onStart: () => setIsPlayingAudio(true),
-      onEnd: () => setIsPlayingAudio(false),
-      onError: () => setIsPlayingAudio(false),
+    speakWithETSAccent(currentQuestion.audioPrompt, accent, speed, () => {
+      setIsPlayingAudio(false);
     });
   };
 
@@ -116,6 +128,20 @@ export const ListeningHub: React.FC<ListeningHubProps> = ({
       playSound('correct');
     } else {
       playSound('wrong');
+      // Save wrong question to Error Vault
+      saveWrongQuestion({
+        source: 'listening',
+        part: currentQuestion.part,
+        topicId: topic?.id || 'general',
+        topicTitle: topic ? (topic.titleVi || topic.title) : 'Listening Practice',
+        questionText: currentQuestion.audioPrompt || currentQuestion.questionText || `Part ${currentQuestion.part} Question`,
+        audioPrompt: currentQuestion.audioPrompt,
+        options: currentQuestion.options.map(o => ({ key: o.key, text: o.text })),
+        userAnswer: key,
+        correctAnswer: currentQuestion.correctAnswer,
+        explanationVi: currentQuestion.explanationVi,
+        trapType: currentQuestion.trapType,
+      });
     }
 
     // Save listening skill completion for this topic
@@ -292,21 +318,50 @@ export const ListeningHub: React.FC<ListeningHubProps> = ({
             </div>
           </div>
 
-          {/* Speed Buttons */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-            {[0.5, 0.75, 1.0].map(speed => (
-              <button
-                key={speed}
-                onClick={() => handlePlayAudio(speed)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                  playbackSpeed === speed
-                    ? 'bg-brand-600 text-white'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                {speed}x
-              </button>
-            ))}
+          {/* Controls: Accent & Speed */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Accent Selector */}
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+              <span className="text-[10px] font-bold text-slate-400 pl-1 hidden sm:inline">Giọng:</span>
+              {ETS_ACCENTS.map(acc => (
+                <button
+                  key={acc.id}
+                  onClick={() => {
+                    setCurrentAccent(acc.id);
+                    setPreferredAccent(acc.id);
+                    if (isPlayingAudio) {
+                      handlePlayAudio(playbackSpeed, acc.id);
+                    }
+                  }}
+                  className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                    currentAccent === acc.id
+                      ? 'bg-[#801732] text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                  title={`${acc.label}: ${acc.desc}`}
+                >
+                  <span>{acc.flag}</span>
+                  <span className="text-[11px] hidden sm:inline">{acc.id}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Speed Buttons */}
+            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+              {[0.5, 0.75, 1.0].map(speed => (
+                <button
+                  key={speed}
+                  onClick={() => handlePlayAudio(speed)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                    playbackSpeed === speed
+                      ? 'bg-brand-600 text-white'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  {speed}x
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

@@ -16,12 +16,17 @@ import { playSound, speakWord, stopSpeaking } from '../utils/audio';
 import { VoiceRecognitionService, calculatePronunciationScore, isSpeechRecognitionSupported, PronunciationEvaluation } from '../utils/speechRecognition';
 import { TOEICPictureCard } from './TOEICPictureCard';
 import { TOEICDocumentViewer } from './TOEICDocumentViewer';
+import { OMRAnswerSheet } from './OMRAnswerSheet';
+import { ScoreCertificateModal } from './ScoreCertificateModal';
+import { saveWrongQuestion } from '../utils/errorVault';
 
 export const ExamSimulator: React.FC = () => {
   const [selectedExamId, setSelectedExamId] = useState<string>(MOCK_EXAM_LIST[0].id);
   const [isTestStarted, setIsTestStarted] = useState(false);
   const [isTestSubmitted, setIsTestSubmitted] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState(0);
+  const [isOMROpen, setIsOMROpen] = useState(false);
+  const [isCertificateOpen, setIsCertificateOpen] = useState(false);
 
   // Audio Playback State for Listening Questions
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -265,6 +270,30 @@ export const ExamSimulator: React.FC = () => {
     setIsTestSubmitted(true);
     setIsTestStarted(false);
     playSound('complete');
+
+    // Automatically record wrong questions to Error Vault
+    if (!isSWExam) {
+      (testQuestions as (ListeningQuestion | ReadingQuestion)[]).forEach((q, idx) => {
+        const uAns = userAnswers[idx];
+        if (uAns && uAns !== q.correctAnswer) {
+          saveWrongQuestion({
+            source: 'exam',
+            part: q.part,
+            topicId: 'mock-exam-' + currentExam.id,
+            topicTitle: currentExam.name,
+            questionText: ('audioPrompt' in q && q.audioPrompt) ? q.audioPrompt : (q.questionText || `Câu ${idx + 1}`),
+            passage: 'passage' in q ? q.passage : undefined,
+            audioPrompt: 'audioPrompt' in q ? q.audioPrompt : undefined,
+            options: q.options.map(o => ({ key: o.key, text: o.text })),
+            userAnswer: uAns,
+            correctAnswer: q.correctAnswer,
+            explanationVi: q.explanationVi || 'Đáp án chính xác theo thang chuẩn ETS.',
+            grammarRuleVi: 'grammarRuleVi' in q ? (q as ReadingQuestion).grammarRuleVi : undefined,
+            trapType: q.trapType,
+          });
+        }
+      });
+    }
   };
 
   // Score Calculation
@@ -519,7 +548,22 @@ export const ExamSimulator: React.FC = () => {
               </span>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              {!isSWExam && (
+                <button
+                  onClick={() => setIsOMROpen(prev => !prev)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
+                    isOMROpen
+                      ? 'bg-[#801732] text-white border-[#801732] shadow-xs'
+                      : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50'
+                  }`}
+                  title="Mở hoặc đóng phiếu tô trắc nghiệm tròn OMR ETS"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>{isOMROpen ? 'Ẩn Phiếu OMR' : 'Phiếu Tô OMR'}</span>
+                </button>
+              )}
+
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 text-amber-900 dark:text-amber-200 text-xs sm:text-sm font-mono font-bold">
                 <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
                 <span>{formatTime(secondsRemaining)}</span>
@@ -533,6 +577,26 @@ export const ExamSimulator: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {/* OMR Scantron Bubble Sheet Drawer/Box */}
+          {isOMROpen && !isSWExam && (
+            <div className="mb-4 animate-in fade-in duration-200">
+              <OMRAnswerSheet
+                totalQuestions={totalQuestions}
+                userAnswers={userAnswers}
+                currentQuestionIndex={currentQIndex}
+                onSelectQuestion={(idx) => setCurrentQIndex(idx)}
+                onSelectAnswer={(qIdx, ans) => {
+                  setUserAnswers(prev => ({ ...prev, [qIdx]: ans }));
+                  playSound('click');
+                }}
+                isThreeOptionQuestion={(idx) => {
+                  const q = testQuestions[idx];
+                  return 'part' in q && q.part === 2;
+                }}
+              />
+            </div>
+          )}
 
           {/* ======================================================== */}
           {/* CASE A: SPEAKING & WRITING QUESTION INTERFACE            */}
@@ -1142,8 +1206,19 @@ export const ExamSimulator: React.FC = () => {
             </div>
           )}
 
-          {/* Retake Test CTA */}
-          <div className="pt-4 flex justify-center">
+          {/* Actions: View Certificate & Retake Test */}
+          <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
+            <button
+              onClick={() => {
+                setIsCertificateOpen(true);
+                playSound('complete');
+              }}
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black text-xs flex items-center gap-2 active:scale-95 shadow-md shadow-amber-500/20"
+            >
+              <Award className="w-4 h-4 text-amber-200" />
+              <span>Xem & Tải Phiếu Báo Điểm ETS (Certificate)</span>
+            </button>
+
             <button
               onClick={() => {
                 setIsTestSubmitted(false);
@@ -1158,6 +1233,20 @@ export const ExamSimulator: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ETS Official Score Certificate Modal */}
+      <ScoreCertificateModal
+        isOpen={isCertificateOpen}
+        onClose={() => setIsCertificateOpen(false)}
+        candidateName="Học Viên DailyVocab"
+        candidateAvatar="🦁"
+        testTitle={currentExam.name}
+        listeningScore={isSWExam ? projectedSpeaking : projectedListening}
+        readingScore={isSWExam ? projectedWriting : projectedReading}
+        totalScore={isSWExam ? totalProjectedSW : totalProjectedScore}
+        targetScore={isSWExam ? 320 : 800}
+        accuracyPercent={isSWExam ? 85 : Math.round((correctCount / Math.max(1, totalQuestions)) * 100)}
+      />
     </div>
   );
 };

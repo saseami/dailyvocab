@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, Sparkles, BookOpen, CheckCircle2, Moon, Sun, Monitor, Plus, BarChart2 } from 'lucide-react';
+import { Flame, Sparkles, BookOpen, CheckCircle2, Moon, Sun, Monitor, Plus, BarChart2, ShieldAlert, Zap, Award } from 'lucide-react';
 
 interface HeaderProps {
   streak: number;
@@ -10,6 +10,10 @@ interface HeaderProps {
   onThemeChange: (theme: 'light' | 'dark' | 'system') => void;
   onOpenAddWord: () => void;
   onOpenStats: () => void;
+  errorVaultCount?: number;
+  onOpenErrorVault?: () => void;
+  onOpenSpeedMatch?: () => void;
+  onOpenBadges?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -21,6 +25,10 @@ export const Header: React.FC<HeaderProps> = ({
   onThemeChange,
   onOpenAddWord,
   onOpenStats,
+  errorVaultCount = 0,
+  onOpenErrorVault,
+  onOpenSpeedMatch,
+  onOpenBadges,
 }) => {
   const isDarkMode = theme === 'dark';
 
@@ -80,6 +88,47 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action Controls */}
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          {/* Error Vault Button (Sổ tay bẫy & câu sai) */}
+          {onOpenErrorVault && (
+            <button
+              onClick={onOpenErrorVault}
+              className="inline-flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900 text-xs font-bold transition-all active:scale-95"
+              title="Sổ Tay Bẫy & Câu Sai Thông Minh (AI Error Vault)"
+            >
+              <ShieldAlert className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+              <span className="hidden lg:inline">Sổ Bẫy</span>
+              {errorVaultCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-rose-600 text-white">
+                  {errorVaultCount}
+                </span>
+              )}
+            </button>
+          )}
+
+          {/* Survival Speed Match (Sinh tồn 60s) */}
+          {onOpenSpeedMatch && (
+            <button
+              onClick={onOpenSpeedMatch}
+              className="hidden sm:inline-flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900 text-xs font-bold transition-all active:scale-95"
+              title="Mini-game: Sinh Tồn 60 Giây (Survival Speed Match)"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 fill-amber-500" />
+              <span className="hidden xl:inline">Sinh Tồn 60s</span>
+            </button>
+          )}
+
+          {/* Badges Button */}
+          {onOpenBadges && (
+            <button
+              onClick={onOpenBadges}
+              className="hidden sm:inline-flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900 text-xs font-bold transition-all active:scale-95"
+              title="Bảng Huy Hiệu Vinh Danh ETS (Achievements)"
+            >
+              <Award className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <span className="hidden xl:inline">Huy Hiệu</span>
+            </button>
+          )}
+
           {/* Add Word Button */}
           <button
             onClick={onOpenAddWord}

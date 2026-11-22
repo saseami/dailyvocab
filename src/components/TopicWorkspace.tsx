@@ -12,6 +12,7 @@ import { WritingStudio } from './WritingStudio';
 import { ListeningHub } from './ListeningHub';
 import { ReadingHub } from './ReadingHub';
 import { TopicEvaluationModal } from './TopicEvaluationModal';
+import { HandsFreeAudioPlayer } from './HandsFreeAudioPlayer';
 import { calculateTopicOverallProgress, saveTopicSkillCompleted } from '../utils/topicProgress';
 import { 
   BookOpen, Headphones, Layers, Mic, PenTool, Sparkles, 
@@ -73,6 +74,7 @@ export const TopicWorkspace: React.FC<TopicWorkspaceProps> = ({
 
   // Topic Evaluation Modal state & dynamic refresh trigger
   const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
+  const [isHandsFreeOpen, setIsHandsFreeOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
@@ -420,19 +422,35 @@ export const TopicWorkspace: React.FC<TopicWorkspaceProps> = ({
               })}
             </div>
 
-            {/* Tra cứu Sổ Từ Pill */}
-            <button
-              onClick={() => {
-                setVocabStep('list');
-                setActiveSession(1);
-                playSound('click');
-              }}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-all flex-shrink-0"
-              title="Tra cứu danh sách từ vựng của chủ đề"
-            >
-              <BookOpen className="w-3.5 h-3.5 text-slate-500" />
-              <span>Sổ từ ({topicWords.length})</span>
-            </button>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {/* Chế độ Nghe Thụ Động Rảnh Tay */}
+              <button
+                onClick={() => {
+                  setIsHandsFreeOpen(true);
+                  playSound('click');
+                }}
+                className="px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
+                title="Chế độ Nghe Thụ Động Rảnh Tay (Hands-Free Audio Autoplayer) khi di chuyển hoặc nghỉ ngơi"
+              >
+                <Headphones className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                <span className="hidden sm:inline">Nghe Thụ Động</span>
+                <span className="sm:hidden">Rảnh Tay</span>
+              </button>
+
+              {/* Tra cứu Sổ Từ Pill */}
+              <button
+                onClick={() => {
+                  setVocabStep('list');
+                  setActiveSession(1);
+                  playSound('click');
+                }}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
+                title="Tra cứu danh sách từ vựng của chủ đề"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-slate-500" />
+                <span>Sổ từ ({topicWords.length})</span>
+              </button>
+            </div>
           </div>
 
           {/* ========================================================================= */}
@@ -918,6 +936,14 @@ export const TopicWorkspace: React.FC<TopicWorkspaceProps> = ({
         topic={topic}
         topicWords={topicWords}
         onNextTopic={onNextTopic}
+      />
+
+      {/* Hands-Free Background Audio Autoplayer */}
+      <HandsFreeAudioPlayer
+        words={topicWords}
+        topicTitle={topic.titleVi || topic.title}
+        isOpen={isHandsFreeOpen}
+        onClose={() => setIsHandsFreeOpen(false)}
       />
     </div>
   );
