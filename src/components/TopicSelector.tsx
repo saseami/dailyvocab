@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Topic, Word } from '../types';
 import { TOEICPhase } from '../data/toeicSkillData';
 import { calculateTopicOverallProgress } from '../utils/topicProgress';
@@ -27,6 +27,15 @@ export const TopicSelector: React.FC<TopicSelectorProps> = ({
 }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [progressUpdateKey, setProgressUpdateKey] = useState(0);
+
+  useEffect(() => {
+    const handleProgressUpdate = () => {
+      setProgressUpdateKey((k) => k + 1);
+    };
+    window.addEventListener('topic-skill-updated', handleProgressUpdate);
+    return () => window.removeEventListener('topic-skill-updated', handleProgressUpdate);
+  }, []);
 
   // Filter topics belonging to current phase (15 topics per phase + special personal notebook)
   const phaseTopics = topics.filter((t) => {

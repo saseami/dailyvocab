@@ -75,6 +75,14 @@ export const TopicWorkspace: React.FC<TopicWorkspaceProps> = ({
   const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  useEffect(() => {
+    const handleProgressUpdate = () => {
+      setRefreshTrigger((k) => k + 1);
+    };
+    window.addEventListener('topic-skill-updated', handleProgressUpdate);
+    return () => window.removeEventListener('topic-skill-updated', handleProgressUpdate);
+  }, []);
+
   // Filter words strictly belonging to this topic
   const topicWords = useMemo(() => {
     return allWords.filter((w) => w.topicId === topic.id || w.day === topic.day);
@@ -239,23 +247,16 @@ export const TopicWorkspace: React.FC<TopicWorkspaceProps> = ({
         setActiveSkillTab('listening');
       }
     } else if (activeSkillTab === 'listening') {
-      saveTopicSkillCompleted(topic.id, 'listening');
-      setRefreshTrigger(prev => prev + 1);
-      triggerCelebration();
+      // Transition without falsely marking complete unless finished via ListeningHub
       setActiveSkillTab('reading');
     } else if (activeSkillTab === 'reading') {
-      saveTopicSkillCompleted(topic.id, 'reading');
-      setRefreshTrigger(prev => prev + 1);
-      triggerCelebration();
+      // Transition without falsely marking complete unless finished via ReadingHub
       setActiveSkillTab('speaking_writing');
       setSwSubMode('writing');
     } else if (activeSkillTab === 'speaking_writing') {
       if (swSubMode === 'writing') {
         setSwSubMode('speaking');
       } else {
-        saveTopicSkillCompleted(topic.id, 'speaking_writing');
-        setRefreshTrigger(prev => prev + 1);
-        triggerCelebration();
         setIsEvaluationModalOpen(true);
       }
     }
@@ -793,17 +794,17 @@ export const TopicWorkspace: React.FC<TopicWorkspaceProps> = ({
             )}
             {activeSkillTab === 'listening' && (
               <>
-                Kỹ năng:{' '}
+                Kỹ năng 2: Luyện Nghe Audio •{' '}
                 <strong className="text-slate-800 dark:text-slate-200">
-                  2. Luyện Nghe Audio (Part 1 &amp; Part 3)
+                  {topicProgress.skills.listening ? '✓ Đã hoàn tất các Part' : 'Cần hoàn tất Part 1 & Part 2'}
                 </strong>
               </>
             )}
             {activeSkillTab === 'reading' && (
               <>
-                Kỹ năng:{' '}
+                Kỹ năng 3: Luyện Đọc Tài Liệu •{' '}
                 <strong className="text-slate-800 dark:text-slate-200">
-                  3. Luyện Đọc Tài Liệu (Part 5 &amp; Part 7)
+                  {topicProgress.skills.reading ? '✓ Đã hoàn tất bài đọc' : 'Cần hoàn tất các câu hỏi Part 5/6/7'}
                 </strong>
               </>
             )}
@@ -818,7 +819,7 @@ export const TopicWorkspace: React.FC<TopicWorkspaceProps> = ({
           </span>
         </div>
 
-        {/* Nút Tiếp Theo Dẫn Dắt Từng Bước Cụ Thể */}
+        {/* Nút Dẫn Dắt / Chuyển Kỹ Năng */}
         <button
           onClick={handleNextInSkill}
           className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#801732] to-[#a32847] hover:from-[#6b132a] hover:to-[#8c223c] text-white text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2 shadow-md shadow-[#801732]/25 active:scale-95 transition-all"
@@ -862,15 +863,33 @@ export const TopicWorkspace: React.FC<TopicWorkspaceProps> = ({
 
           {activeSkillTab === 'listening' && (
             <>
-              <span>Hoàn Thành Luyện Nghe ➔ Sang Kỹ Năng 3: Luyện Đọc</span>
-              <ArrowRight className="w-4 h-4" />
+              {topicProgress.skills.listening ? (
+                <>
+                  <span>✓ Đã Đạt Chuẩn Nghe ➔ Sang Kỹ Năng 3: Luyện Đọc</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              ) : (
+                <>
+                  <span>Chuyển sang Kỹ Năng 3: Luyện Đọc (Làm nghe sau)</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </>
           )}
 
           {activeSkillTab === 'reading' && (
             <>
-              <span>Hoàn Thành Luyện Đọc ➔ Sang Kỹ Năng 4: Viết &amp; Nói</span>
-              <ArrowRight className="w-4 h-4" />
+              {topicProgress.skills.reading ? (
+                <>
+                  <span>✓ Đã Đạt Chuẩn Đọc ➔ Sang Kỹ Năng 4: Viết &amp; Nói</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              ) : (
+                <>
+                  <span>Chuyển sang Kỹ Năng 4: Viết &amp; Nói (Làm đọc sau)</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </>
           )}
 

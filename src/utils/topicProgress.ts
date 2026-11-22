@@ -35,6 +35,9 @@ export function saveTopicSkillCompleted(topicId: string, skill: keyof TopicSkill
 
   try {
     localStorage.setItem(TOPIC_SKILLS_STORAGE_KEY, JSON.stringify(map));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('topic-skill-updated', { detail: { topicId, skill } }));
+    }
   } catch {}
 
   return updated;

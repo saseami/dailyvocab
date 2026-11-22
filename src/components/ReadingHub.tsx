@@ -49,6 +49,7 @@ export const ReadingHub: React.FC<ReadingHubProps> = ({
   const [selectedPart, setSelectedPart] = useState<number>(() => {
     return currentPhase === 'acceleration' ? 7 : 5;
   });
+  const [completedParts, setCompletedParts] = useState<number[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<'A' | 'B' | 'C' | 'D' | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
@@ -176,14 +177,16 @@ export const ReadingHub: React.FC<ReadingHubProps> = ({
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                 selectedPart === item.part
                   ? 'bg-[#801732] text-white shadow-sm'
+                  : completedParts.includes(item.part)
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-700'
               }`}
             >
-              <span>{item.label}</span>
+              <span>{completedParts.includes(item.part) ? `✓ ${item.label}` : item.label}</span>
               <span className={`text-[9px] px-1 py-0.2 rounded font-black ${
-                selectedPart === item.part ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+                selectedPart === item.part ? 'bg-white/20 text-white' : completedParts.includes(item.part) ? 'bg-emerald-200/60 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
               }`}>
-                {item.phaseTag}
+                {completedParts.includes(item.part) ? 'ĐÃ XONG' : item.phaseTag}
               </span>
             </button>
           ))}
@@ -391,21 +394,56 @@ export const ReadingHub: React.FC<ReadingHubProps> = ({
                   </button>
                 </div>
               ) : (
-                <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
-                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                    <span>✓ Đã hoàn tất toàn bộ câu hỏi Đọc hiểu của phần này! (Ghi nhận +25% tiến độ)</span>
-                  </div>
-                  {onCompleteReading && (
-                    <button
-                      onClick={onCompleteReading}
-                      className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#801732] to-rose-700 hover:from-[#6b132a] hover:to-rose-800 text-white text-xs sm:text-sm font-bold shadow-md flex items-center justify-center gap-2 active:scale-95 transition-all"
-                    >
-                      <span>Sang Kỹ năng Nói & Viết (SW)</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+                (() => {
+                  const updatedCompleted = Array.from(new Set([...completedParts, selectedPart]));
+                  const nextPartToRun = availableParts.find(p => !updatedCompleted.includes(p.part));
+
+                  if (nextPartToRun) {
+                    return (
+                      <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                        <div className="flex items-center gap-2 text-xs font-bold text-amber-800 dark:text-amber-300">
+                          <CheckCircle2 className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                          <span>Đã xong {availableParts.find(p => p.part === selectedPart)?.label.split('(')[0]}. Hãy tiếp tục phần {nextPartToRun.label.split('(')[0]}!</span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setCompletedParts(updatedCompleted);
+                            setSelectedPart(nextPartToRun.part);
+                            setCurrentIndex(0);
+                            setSelectedAnswer(null);
+                            setShowExplanation(false);
+                            playSound('click');
+                          }}
+                          className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#801732] to-rose-700 hover:from-[#6b132a] hover:to-rose-800 text-white text-xs sm:text-sm font-bold shadow-md flex items-center justify-center gap-2 active:scale-95 transition-all"
+                        >
+                          <span>Tiếp tục: Sang {nextPartToRun.label.split('(')[0]}</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
+                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                        <span>✓ Đã hoàn tất toàn bộ {availableParts.length} phần Luyện Đọc ({availableParts.map(p => p.label.split(':')[0]).join(' & ')})! (+25% tiến độ)</span>
+                      </div>
+                      {onCompleteReading && (
+                        <button
+                          onClick={() => {
+                            setCompletedParts(updatedCompleted);
+                            onCompleteReading();
+                          }}
+                          className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs sm:text-sm font-bold shadow-md flex items-center justify-center gap-2 active:scale-95 transition-all"
+                        >
+                          <span>Hoàn thành Đọc ➔ Sang Kỹ năng Nói &amp; Viết</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()
               )}
             </div>
           </div>

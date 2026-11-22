@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Word } from '../types';
-import { BookOpen, Sparkles, Plus, Check, ExternalLink } from 'lucide-react';
+import { BookOpen, Sparkles, Plus, Check, ExternalLink, X } from 'lucide-react';
 import { getContextualWordInfo } from '../utils/contextualDictionary';
 import { playSound } from '../utils/audio';
 
@@ -15,78 +15,60 @@ export const TextSelectionLearner: React.FC<TextSelectionLearnerProps> = ({
 }) => {
   const [selectedText, setSelectedText] = useState<string>('');
   const [contextSentence, setContextSentence] = useState<string>('');
-  const [buttonPosition, setButtonPosition] = useState<{ top: number; left: number } | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleSelectionChange = () => {
-      const selection = window.getSelection();
-      if (!selection || selection.isCollapsed) {
-        // Only clear if not clicking our own button
-        return;
-      }
+    let timer: any = null;
 
-      const text = selection.toString().trim();
-      // Filter out overly long text selections or single characters
-      if (text.length > 1 && text.length <= 40 && text.split(/\s+/).length <= 4) {
-        try {
-          const range = selection.getRangeAt(0);
-          const rect = range.getBoundingClientRect();
-
-          // Try to get surrounding sentence context
-          const containerText = range.commonAncestorContainer.textContent || '';
-          let sentence = text;
-          if (containerText.length > text.length) {
-            // Find sentence boundaries around the text
-            const textIdx = containerText.indexOf(text);
-            if (textIdx !== -1) {
-              const prevPeriod = containerText.lastIndexOf('.', textIdx);
-              const nextPeriod = containerText.indexOf('.', textIdx + text.length);
-              const start = prevPeriod !== -1 ? prevPeriod + 1 : 0;
-              const end = nextPeriod !== -1 ? nextPeriod + 1 : containerText.length;
-              sentence = containerText.substring(start, end).trim();
-            }
-          }
-
-          setSelectedText(text);
-          setContextSentence(sentence);
-
-          // Position tooltip above the selection, clamped to viewport
-          const top = Math.max(10, rect.top + window.scrollY - 44);
-          const left = Math.min(window.innerWidth - 180, Math.max(10, rect.left + window.scrollX + (rect.width / 2) - 80));
-          setButtonPosition({ top, left });
-        } catch {
-          setButtonPosition(null);
+    const handleSelection = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        const selection = window.getSelection();
+        if (!selection || selection.isCollapsed) {
+          return;
         }
-      } else {
-        setButtonPosition(null);
-      }
+
+        const rawText = selection.toString().trim();
+        // Clean off non-alphabetical punctuation at edges
+        const text = rawText.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, '').trim();
+
+        // Target: single words or short idioms (2 to 35 chars, max 3 words)
+        if (text.length >= 2 && text.length <= 35 && text.split(/\s+/).length <= 3) {
+          setSelectedText(text);
+
+          try {
+            const range = selection.getRangeAt(0);
+            const containerText = range.commonAncestorContainer.textContent || '';
+            let sentence = text;
+            if (containerText.length > text.length) {
+              const textIdx = containerText.indexOf(text);
+              if (textIdx !== -1) {
+                const prevPeriod = containerText.lastIndexOf('.', textIdx);
+                const nextPeriod = containerText.indexOf('.', textIdx + text.length);
+                const start = prevPeriod !== -1 ? prevPeriod + 1 : 0;
+                const end = nextPeriod !== -1 ? nextPeriod + 1 : containerText.length;
+                sentence = containerText.substring(start, end).trim();
+              }
+            }
+            setContextSentence(sentence);
+          } catch {
+            setContextSentence(text);
+          }
+        }
+      }, 150);
     };
 
-    const handleMouseUp = () => {
-      // Small timeout to allow selection to settle
-      setTimeout(handleSelectionChange, 100);
-    };
-
-    const handleDocumentClick = (e: MouseEvent) => {
-      if (containerRef.current && containerRef.current.contains(e.target as Node)) {
-        return;
-      }
-      // Clicked outside, check if selection was cleared
-      const selection = window.getSelection();
-      if (!selection || selection.isCollapsed) {
-        setButtonPosition(null);
-      }
-    };
-
-    document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('mousedown', handleDocumentClick);
+    // Support both Desktop (mouseup) and Mobile Safari/iOS (touchend & selectionchange)
+    document.addEventListener('selectionchange', handleSelection);
+    document.addEventListener('mouseup', handleSelection);
+    document.addEventListener('touchend', handleSelection);
 
     return () => {
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('mousedown', handleDocumentClick);
+      if (timer) clearTimeout(timer);
+      document.removeEventListener('selectionchange', handleSelection);
+      document.removeEventListener('mouseup', handleSelection);
+      document.removeEventListener('touchend', handleSelection);
     };
   }, []);
 
@@ -116,48 +98,76 @@ export const TextSelectionLearner: React.FC<TextSelectionLearnerProps> = ({
     onSaveCustomWord(newWordData);
     playSound('correct');
 
-    // Show toast confirmation
-    setToastMessage(`Đã thêm "${selectedText}" vào Sổ Từ Cá Nhân!`);
-    setButtonPosition(null);
+    const savedWordName = selectedText;
+    setSelectedText('');
+    setToastMessage(`Đã thêm "${savedWordName}" (${info.meaningVi}) vào Sổ Từ Cá Nhân!`);
 
-    // Clear window selection
-    window.getSelection()?.removeAllRanges();
+    try {
+      window.getSelection()?.removeAllRanges();
+    } catch {}
 
     setTimeout(() => {
       setToastMessage(null);
     }, 4500);
   };
 
+  const handleDismiss = () => {
+    setSelectedText('');
+    try {
+      window.getSelection()?.removeAllRanges();
+    } catch {}
+  };
+
   return (
     <>
-      {/* Floating Action Button above highlighted text */}
-      {buttonPosition && (
+      {/* Floating Action Pill docked above bottom navigation on Mobile & Desktop */}
+      {selectedText && (
         <div
           ref={containerRef}
-          style={{ top: `${buttonPosition.top}px`, left: `${buttonPosition.left}px` }}
-          className="fixed z-50 animate-in fade-in zoom-in-95 duration-150 pointer-events-auto"
+          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[9999] pointer-events-auto max-w-[92vw] animate-in fade-in slide-in-from-bottom-3 duration-150"
         >
-          <button
-            onClick={handleLearnWord}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#801732] hover:bg-[#6b132a] text-white text-xs font-black shadow-lg shadow-[#801732]/30 active:scale-95 transition-all ring-2 ring-white/50 cursor-pointer"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>+ Học từ này</span>
-          </button>
+          <div className="flex items-center gap-2 p-1.5 pl-3.5 pr-2 rounded-2xl bg-slate-900/95 dark:bg-slate-950/95 text-white border-2 border-rose-500/80 shadow-2xl backdrop-blur-md">
+            <Sparkles className="w-4 h-4 text-amber-400 flex-shrink-0 animate-pulse" />
+            
+            <div className="min-w-0 pr-1 text-left">
+              <span className="text-xs font-black text-rose-300 truncate block">
+                "{selectedText}"
+              </span>
+              <span className="text-[10px] text-slate-300 block truncate">
+                Tô đen để học từ mới
+              </span>
+            </div>
+
+            <button
+              onClick={handleLearnWord}
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#801732] to-rose-600 hover:from-[#6b132a] hover:to-rose-700 text-white text-xs font-black shadow-md flex items-center gap-1.5 flex-shrink-0 active:scale-95 transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Lưu vào Sổ Từ</span>
+            </button>
+
+            <button
+              onClick={handleDismiss}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white text-xs ml-0.5"
+              aria-label="Đóng"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       )}
 
       {/* Toast Notification when word is saved */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 duration-200">
+        <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-[9999] max-w-sm animate-in slide-in-from-bottom-5 duration-200">
           <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-900 text-white border border-slate-700 shadow-2xl">
-            <div className="w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black">
+            <div className="w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black flex-shrink-0">
               <Check className="w-4 h-4" />
             </div>
-            <div>
-              <p className="text-xs font-bold text-slate-100">{toastMessage}</p>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-slate-100 truncate">{toastMessage}</p>
               <p className="text-[11px] text-slate-400">
-                Lưu vào <strong>Sổ Từ Cá Nhân</strong> có đầy đủ Flashcard &amp; Kiểm tra.
+                Đã đồng bộ vào <strong>Sổ Từ Cá Nhân</strong>.
               </p>
             </div>
             {onOpenPersonalTopic && (
@@ -166,7 +176,7 @@ export const TextSelectionLearner: React.FC<TextSelectionLearnerProps> = ({
                   onOpenPersonalTopic();
                   setToastMessage(null);
                 }}
-                className="px-2.5 py-1 rounded-lg bg-[#801732] hover:bg-[#6b132a] text-[11px] font-black text-white flex items-center gap-1 ml-2 transition-all"
+                className="px-2.5 py-1 rounded-lg bg-[#801732] hover:bg-[#6b132a] text-[11px] font-black text-white flex items-center gap-1 ml-2 transition-all flex-shrink-0"
               >
                 <span>Học ngay</span>
                 <ExternalLink className="w-3 h-3" />
