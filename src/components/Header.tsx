@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, Sparkles, BookOpen, CheckCircle2, Moon, Sun, Monitor, Plus, BarChart2, ShieldAlert, Zap, Award } from 'lucide-react';
+import { Flame, Sparkles, BookOpen, CheckCircle2, Moon, Sun, Monitor, Plus, BarChart2, ShieldAlert, Zap, Award, BookMarked } from 'lucide-react';
 
 interface HeaderProps {
   streak: number;
@@ -14,6 +14,7 @@ interface HeaderProps {
   onOpenErrorVault?: () => void;
   onOpenSpeedMatch?: () => void;
   onOpenBadges?: () => void;
+  onOpenContextualHandbook?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -29,6 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenErrorVault,
   onOpenSpeedMatch,
   onOpenBadges,
+  onOpenContextualHandbook,
 }) => {
   const isDarkMode = theme === 'dark';
 
@@ -102,6 +104,18 @@ export const Header: React.FC<HeaderProps> = ({
                   {errorVaultCount}
                 </span>
               )}
+            </button>
+          )}
+
+          {/* Cẩm Nang Từ Vựng Theo Ngữ Cảnh (The Forum Center) */}
+          {onOpenContextualHandbook && (
+            <button
+              onClick={onOpenContextualHandbook}
+              className="inline-flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200/90 dark:border-emerald-800/80 text-xs font-bold transition-all active:scale-95 shadow-xs"
+              title="Cẩm Nang Từ Vựng Tiếng Anh Theo Ngữ Cảnh (Nguyễn Hoàng Huy - The Forum Center)"
+            >
+              <BookMarked className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span className="hidden md:inline">Cẩm Nang Ngữ Cảnh</span>
             </button>
           )}
 

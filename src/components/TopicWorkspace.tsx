@@ -18,7 +18,7 @@ import { getTopicWorkspaceState, saveTopicWorkspaceState } from '../utils/sessio
 import { 
   BookOpen, Headphones, Layers, Mic, PenTool, Sparkles, 
   RotateCcw, CheckCircle2, ChevronRight, ArrowRight, Trophy, Zap, 
-  Check, Eye, Compass, Flame, Clock, Award, ArrowLeft, ShieldAlert, AlertTriangle
+  Check, Eye, Compass, Flame, Clock, Award, ArrowLeft, ShieldAlert, AlertTriangle, BookMarked
 } from 'lucide-react';
 import { playSound } from '../utils/audio';
 
@@ -37,6 +37,7 @@ interface TopicWorkspaceProps {
   triggerCelebration: () => void;
   currentPhase: TOEICPhase;
   onNextTopic?: () => void;
+  onOpenContextualHandbook?: () => void;
 }
 
 export const TopicWorkspace: React.FC<TopicWorkspaceProps> = ({
@@ -51,6 +52,7 @@ export const TopicWorkspace: React.FC<TopicWorkspaceProps> = ({
   triggerCelebration,
   currentPhase,
   onNextTopic,
+  onOpenContextualHandbook,
 }) => {
   // 4 Core Skills of the Topic - restored from saved workspace state
   const [activeSkillTab, setActiveSkillTab] = useState<TopicSkillTab>(() => {
@@ -379,8 +381,22 @@ export const TopicWorkspace: React.FC<TopicWorkspaceProps> = ({
           })}
         </div>
 
-        {/* Nút Đánh Giá & Tiến Độ 4 Kỹ Năng */}
-        <div className="flex items-center justify-between md:justify-end gap-2 px-1 md:px-0 flex-shrink-0 border-t md:border-t-0 pt-1.5 md:pt-0 border-slate-100 dark:border-slate-800">
+        {/* Nút Đánh Giá & Cẩm Nang Ngữ Cảnh */}
+        <div className="flex items-center justify-between md:justify-end gap-2 px-1 md:px-0 flex-shrink-0 border-t md:border-t-0 pt-1.5 md:pt-0 border-slate-100 dark:border-slate-800 flex-wrap">
+          {onOpenContextualHandbook && (
+            <button
+              onClick={() => {
+                onOpenContextualHandbook();
+                playSound('click');
+              }}
+              className="px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200/90 dark:border-emerald-800/80 text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs"
+              title="Cẩm nang từ vựng tiếng Anh theo ngữ cảnh (The Forum Center)"
+            >
+              <BookMarked className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+              <span>Cẩm Nang Ngữ Cảnh</span>
+            </button>
+          )}
+
           <button
             onClick={() => {
               setIsEvaluationModalOpen(true);

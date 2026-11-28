@@ -16,6 +16,7 @@ import { OfflineIndicator } from './components/OfflineIndicator';
 import { ErrorVaultModal } from './components/ErrorVaultModal';
 import { SurvivalSpeedMatchModal } from './components/SurvivalSpeedMatchModal';
 import { BadgesModal } from './components/BadgesModal';
+import { ContextualHandbookModal } from './components/ContextualHandbookModal';
 import { getErrorVault } from './utils/errorVault';
 import { getAppNavigationState, saveAppNavigationState } from './utils/sessionPersistence';
 import { TOEICPhase } from './data/toeicSkillData';
@@ -52,6 +53,7 @@ export const App: React.FC = () => {
   const [isErrorVaultOpen, setIsErrorVaultOpen] = useState(false);
   const [isSpeedMatchOpen, setIsSpeedMatchOpen] = useState(false);
   const [isBadgesOpen, setIsBadgesOpen] = useState(false);
+  const [isContextualHandbookOpen, setIsContextualHandbookOpen] = useState(false);
   const [errorVaultCount, setErrorVaultCount] = useState<number>(() => getErrorVault().length);
   const savedNav = getAppNavigationState();
 
@@ -187,6 +189,7 @@ export const App: React.FC = () => {
         onOpenErrorVault={() => setIsErrorVaultOpen(true)}
         onOpenSpeedMatch={() => setIsSpeedMatchOpen(true)}
         onOpenBadges={() => setIsBadgesOpen(true)}
+        onOpenContextualHandbook={() => setIsContextualHandbookOpen(true)}
         onOpenStats={() => {
           if (window.innerWidth < 768) {
             setMobileTab('profile');
@@ -239,6 +242,7 @@ export const App: React.FC = () => {
                 triggerCelebration={triggerCelebration}
                 currentPhase={currentPhase}
                 onNextTopic={handleNextTopic}
+                onOpenContextualHandbook={() => setIsContextualHandbookOpen(true)}
               />
             </div>
           )}
@@ -287,6 +291,7 @@ export const App: React.FC = () => {
                     triggerCelebration={triggerCelebration}
                     currentPhase={currentPhase}
                     onNextTopic={handleNextTopic}
+                    onOpenContextualHandbook={() => setIsContextualHandbookOpen(true)}
                   />
                 </div>
               )}
@@ -395,6 +400,14 @@ export const App: React.FC = () => {
       <BadgesModal
         isOpen={isBadgesOpen}
         onClose={() => setIsBadgesOpen(false)}
+      />
+
+      {/* Cẩm Nang Từ Vựng Tiếng Anh Theo Ngữ Cảnh (The Forum Center) */}
+      <ContextualHandbookModal
+        isOpen={isContextualHandbookOpen}
+        onClose={() => setIsContextualHandbookOpen(false)}
+        onSaveToNotebook={addCustomWord}
+        savedWordIds={progress.bookmarkedWords}
       />
     </div>
   );

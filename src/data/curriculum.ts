@@ -1,5 +1,6 @@
 import { Topic, Word } from '../types';
 import { SUPPLEMENTAL_WORDS } from './supplementalVocab';
+import { FORUM_CONTEXTUAL_WORDS } from './contextualForumVocab';
 
 export const TOPICS: Topic[] = [
   {
@@ -10188,4 +10189,4 @@ const BASE_INITIAL_WORDS: Word[] = [
   },
 ];
 
-export const INITIAL_WORDS: Word[] = [...BASE_INITIAL_WORDS, ...SUPPLEMENTAL_WORDS];
+export const INITIAL_WORDS: Word[] = [...BASE_INITIAL_WORDS, ...SUPPLEMENTAL_WORDS, ...FORUM_CONTEXTUAL_WORDS];
